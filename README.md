@@ -1,6 +1,7 @@
 # Mémorix 🧠✨
+<img width="512" height="512" alt="icon" src="https://github.com/user-attachments/assets/b9dd9798-5762-4101-a232-54f75b832f5a" />
 
-> Un jeu de mémoire visuel, auditif et progressif. Create by ** \\*Co_D*// **.
+> Un jeu de mémoire visuel, auditif et progressif. Create by ** *Co_D* **.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-indigo)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -50,7 +51,7 @@ Le jeu commence doucement. Mais ne vous y trompez pas :
 ## 📄 Licence
 
 Ce projet est sous licence MIT.  
-Copyright (c) 2026 ** \\*Co_D*// **
+Copyright (c) 2026 ** *Co_D* **
 
 ---
-*Développé avec passion pour faire travailler vos neurones! Si vous en voulez encore me faut un café :p*
+*Développé avec passion pour faire travailler vos neurones!*
