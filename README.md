@@ -15,7 +15,7 @@ Le concept est simple : une séquence de formes et de sons est jouée, vous deve
 Le jeu commence doucement. Mais ne vous y trompez pas :
 - **Niveau 1-3** : Pour s'échauffer.
 - **Niveau 4-5** : La concentration doit être totale.
-- **Niveau 6** : **Le mur.** Statistiquement, seuls 30% des joueurs passent ce cap du premier coup. Êtes-vous l'un d'eux ?
+- **NIVEAU 6** : **LE MUR !!** Statistiquement, seuls 30% des joueurs passent ce cap. Êtes-vous l'un d'eux ? :p
 
 ## ✨ Fonctionnalités
 
