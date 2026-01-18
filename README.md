@@ -33,21 +33,6 @@ Le jeu commence doucement. Mais ne vous y trompez pas :
 *   **Lucide React** : Pour l'iconographie vectorielle.
 *   **Vite** : Pour un build ultra-rapide.
 
-## 🚀 Installation & Développement
-
-1.  Cloner le repo :
-    ```bash
-    git clone https://github.com/EktorPolux/Memorix
-    ```
-2.  Installer les dépendances :
-    ```bash
-    npm install
-    ```
-3.  Lancer le serveur de développement :
-    ```bash
-    npm run dev
-    ```
-
 ## 📄 Licence
 
 Ce projet est sous licence MIT.  
