@@ -1,4 +1,4 @@
-# Mémorix 🧠✨
+# Mémorix 🧠✨ https://ektorpolux.github.io/Memorix/
 <img width="512" height="512" alt="icon" src="https://github.com/user-attachments/assets/b9dd9798-5762-4101-a232-54f75b832f5a" />
 
 > Un jeu de mémoire visuel, auditif et progressif. Create by ** *Co_D* **.
