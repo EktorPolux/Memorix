@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Des expériences courtes, générées par le code : un jeu de mémoire et six équations qui dessinent l'invisible.">
+<meta name="theme-color" content="#020007">
+<title>Procedural Playground — Accueil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#020007;
+  --fg:#ede8ff;
+  --muted:rgba(237,232,255,.62);
+  --faint:rgba(237,232,255,.55);
+  --line:rgba(255,255,255,.08);
+}
+html{background:var(--bg);}
+body{
+  min-height:100vh;min-height:100svh;
+  background:var(--bg);color:var(--fg);
+  font-family:'DM Mono',ui-monospace,monospace;
+  display:flex;align-items:center;justify-content:center;
+  overflow-x:hidden;
+}
+#bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;}
+main{
+  position:relative;z-index:1;
+  width:100%;max-width:1040px;
+  padding:72px 24px;
+}
+header{text-align:center;margin-bottom:64px;}
+.pre{
+  font-size:10px;letter-spacing:7px;text-transform:uppercase;
+  color:var(--faint);margin-bottom:28px;
+}
+h1{
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-style:italic;font-weight:300;
+  font-size:clamp(52px,10vw,112px);line-height:.92;color:#fff;
+  margin-bottom:22px;
+}
+.lead{
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-weight:300;font-size:clamp(18px,2.6vw,26px);
+  letter-spacing:2px;color:var(--muted);
+}
+
+.cards{display:grid;grid-template-columns:1fr;gap:20px;}
+@media(min-width:760px){.cards{grid-template-columns:1fr 1fr;gap:28px;}}
+
+.card{
+  --c:#fff;
+  position:relative;display:flex;flex-direction:column;
+  padding:36px 34px 32px;min-height:300px;
+  color:inherit;text-decoration:none;
+  background:rgba(2,0,10,.72);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  border:1px solid var(--line);
+  transition:border-color .35s,transform .35s,box-shadow .35s;
+}
+.card::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:var(--c);opacity:.55;transition:opacity .35s;
+}
+.card:hover,.card:focus-visible{
+  border-color:color-mix(in srgb,var(--c) 45%,transparent);
+  transform:translateY(-4px);
+  box-shadow:0 18px 50px -20px var(--c);
+}
+.card:hover::before,.card:focus-visible::before{opacity:1;}
+.card:focus-visible{outline:2px solid var(--c);outline-offset:4px;}
+
+.num{font-size:10px;letter-spacing:5px;text-transform:uppercase;color:var(--c);margin-bottom:18px;}
+.card h2{
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-style:italic;font-weight:300;
+  font-size:clamp(34px,4.4vw,48px);line-height:1.04;color:#fff;margin-bottom:16px;
+}
+.card p{font-size:12px;line-height:2.1;color:var(--muted);}
+.go{
+  margin-top:auto;padding-top:28px;
+  font-size:10px;letter-spacing:5px;text-transform:uppercase;color:var(--c);
+}
+.go span{display:inline-block;transition:transform .35s;}
+.card:hover .go span,.card:focus-visible .go span{transform:translateX(6px);}
+
+.memorix{--c:#818cf8;}
+.formes{--c:#f0b800;}
+
+footer{
+  margin-top:56px;text-align:center;
+  font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--faint);
+}
+
+@media(max-width:640px){
+  main{padding:48px 20px;}
+  header{margin-bottom:44px;}
+  .card{padding:28px 24px 26px;min-height:0;}
+}
+@media(prefers-reduced-motion:reduce){
+  .card,.card::before,.go span{transition:none;}
+  .card:hover,.card:focus-visible{transform:none;}
+}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<main>
+  <header>
+    <p class="pre">Art génératif · Jeux · Navigateur</p>
+    <h1>Procedural<br>Playground</h1>
+    <p class="lead">Des expériences courtes, générées par le code.</p>
+  </header>
+
+  <nav class="cards" aria-label="Expériences">
+    <a class="card memorix" href="../">
+      <p class="num">01 · Jeu · PWA</p>
+      <h2>Mémorix</h2>
+      <p>
+        Une séquence de formes et de sons. Tu la rejoues, elle s'allonge.
+        Le niveau 6 est le mur : à peine un joueur sur trois le franchit.
+      </p>
+      <p class="go"><span>Jouer →</span></p>
+    </a>
+
+    <a class="card formes" href="../formes-de-linvisible/">
+      <p class="num">02 · Art génératif · Mathématiques</p>
+      <h2>Formes de<br>l'Invisible</h2>
+      <p>
+        Six équations, six univers : surface d'Enneper, fibration de Hopf,
+        attracteur de Rössler, bouteille de Klein. Rien n'est dessiné à la main.
+      </p>
+      <p class="go"><span>Entrer →</span></p>
+    </a>
+  </nav>
+
+  <footer>Rien d'autre que du code</footer>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var cv=document.getElementById('bg'),ctx=cv.getContext('2d');
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var W=0,H=0,pts=[],s=0,phi=(1+Math.sqrt(5))/2;
+
+  function size(){
+    var dpr=window.devicePixelRatio||1;
+    W=cv.clientWidth;H=cv.clientHeight;
+    cv.width=W*dpr;cv.height=H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.fillStyle='#020007';ctx.fillRect(0,0,W,H);
+  }
+
+  function step(n){
+    for(var k=0;k<n;k++){
+      s+=.016;
+      pts.push([
+        W*.5+Math.cos(s)*W*.42,
+        H*.5+Math.cos(phi*s+Math.sin(s*.13)*1.4)*H*.38
+      ]);
+      if(pts.length>1500)pts.shift();
+    }
+  }
+
+  function draw(){
+    ctx.fillStyle='rgba(2,0,7,.9)';ctx.fillRect(0,0,W,H);
+    ctx.lineWidth=1;
+    for(var i=1;i<pts.length;i++){
+      var a=i/pts.length;
+      ctx.beginPath();
+      ctx.moveTo(pts[i-1][0],pts[i-1][1]);
+      ctx.lineTo(pts[i][0],pts[i][1]);
+      ctx.strokeStyle='hsla('+(240+60*Math.sin(i*.004))+',70%,66%,'+(a*a*.32)+')';
+      ctx.stroke();
+    }
+  }
+
+  function loop(){step(3);draw();requestAnimationFrame(loop);}
+
+  size();
+  window.addEventListener('resize',function(){size();if(reduce){step(1400);draw();}});
+  if(reduce){step(1400);draw();}else{requestAnimationFrame(loop);}
+})();
+</script>
+</body>
+</html>
