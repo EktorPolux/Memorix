@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lumina Coast - Standalone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap');
+      
+      body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #050505;
+        overflow: hidden;
+        font-family: 'Rajdhani', sans-serif;
+      }
+      
+      #canvas-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+      }
+
+      #ui-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 10;
+      }
+
+      .btn-quality {
+        transition: all 0.2s ease;
+        cursor: pointer;
+        pointer-events: auto;
+      }
+
+      .btn-quality.active {
+        background-color: #06b6d4;
+        color: black;
+        box-shadow: 0 0 10px rgba(6,182,212,0.5);
+      }
+
+      /* Custom Color Input Styling */
+      input[type="color"] {
+        -webkit-appearance: none;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        cursor: pointer;
+        background: none;
+        padding: 0;
+        overflow: hidden;
+      }
+      input[type="color"]::-webkit-color-swatch-wrapper {
+        padding: 0;
+      }
+      input[type="color"]::-webkit-color-swatch {
+        border: 2px solid rgba(255,255,255,0.2);
+        border-radius: 50%;
+      }
+    </style>
+    <!-- Import Map for Three.js -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://esm.sh/three@0.160.0",
+          "three/examples/": "https://esm.sh/three@0.160.0/examples/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer" class="p-4 md:p-8 flex flex-col justify-between">
+      
+      <!-- Header -->
+      <header class="flex justify-between items-start pointer-events-auto">
+        <div>
+          <h1 class="text-3xl md:text-4xl font-bold text-white tracking-tighter uppercase drop-shadow-[0_0_15px_rgba(0,255,255,0.3)]">
+            Lumina<span class="text-cyan-400">Coast</span>
+          </h1>
+          <p class="text-cyan-200/60 text-xs md:text-sm tracking-widest mt-1">NATIVE ENGINE // STANDALONE</p>
+        </div>
+        
+        <div class="flex flex-col items-end gap-2">
+           <div class="flex items-center gap-2 text-[10px] md:text-xs text-cyan-400 border border-cyan-900/50 bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm">
+            <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+            NATIVE CORE ACTIVE
+          </div>
+          
+          <!-- Quality Selector -->
+          <div class="flex gap-1 bg-black/40 p-1 rounded-lg border border-white/10 backdrop-blur-sm pointer-events-auto">
+            <button id="q-low" class="btn-quality px-3 py-1 text-[10px] font-bold uppercase rounded text-cyan-400/50 hover:text-cyan-300 hover:bg-white/5">LOW</button>
+            <button id="q-medium" class="btn-quality px-3 py-1 text-[10px] font-bold uppercase rounded text-cyan-400/50 hover:text-cyan-300 hover:bg-white/5 active">MED</button>
+            <button id="q-high" class="btn-quality px-3 py-1 text-[10px] font-bold uppercase rounded text-cyan-400/50 hover:text-cyan-300 hover:bg-white/5">HIGH</button>
+            <button id="q-shigh" class="btn-quality px-3 py-1 text-[10px] font-bold uppercase rounded text-purple-400/50 hover:text-purple-300 hover:bg-white/5 border-l border-white/10 ml-1">S-HIGH</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Settings Button (Right Side) -->
+      <button id="btn-settings" class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 hover:translate-x-0 transition-transform duration-200 pointer-events-auto bg-black/60 backdrop-blur-md border-l border-y border-white/10 p-3 rounded-l-xl text-cyan-400 hover:text-white group z-50">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-[spin_10s_linear_infinite] group-hover:animate-none"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+
+      <!-- Settings Panel -->
+      <div id="settings-panel" class="absolute right-0 top-0 h-full w-80 bg-black/90 backdrop-blur-xl border-l border-white/10 p-6 flex flex-col gap-8 translate-x-full transition-transform duration-300 pointer-events-auto z-40 shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+        
+        <div class="flex justify-between items-center border-b border-white/10 pb-4">
+          <h2 class="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <span class="w-1 h-6 bg-cyan-500 block"></span>
+            Theme
+          </h2>
+          <button id="btn-close-settings" class="text-white/50 hover:text-white p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>
+          </button>
+        </div>
+
+        <div class="space-y-6">
+          <!-- Deep Color -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+              <label class="text-cyan-200/70 font-mono uppercase">Deep Ocean</label>
+              <span class="text-xs text-white/30" id="hex-deep">#000D33</span>
+            </div>
+            <div class="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/5">
+              <input type="color" id="col-deep" value="#000d33">
+              <div class="text-xs text-white/50">Base depth color</div>
+            </div>
+          </div>
+
+          <!-- Mid Color -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+              <label class="text-cyan-200/70 font-mono uppercase">Mid Tones</label>
+              <span class="text-xs text-white/30" id="hex-mid">#0080CC</span>
+            </div>
+            <div class="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/5">
+              <input type="color" id="col-mid" value="#0080cc">
+              <div class="text-xs text-white/50">Main wave body</div>
+            </div>
+          </div>
+
+          <!-- High Color -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+              <label class="text-cyan-200/70 font-mono uppercase">Highlights</label>
+              <span class="text-xs text-white/30" id="hex-high">#99E6FF</span>
+            </div>
+            <div class="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/5">
+              <input type="color" id="col-high" value="#99e6ff">
+              <div class="text-xs text-white/50">Peaks and foam</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-auto pt-6 border-t border-white/10 text-center">
+           <p class="text-[10px] text-white/20 uppercase tracking-widest">Procedural Shader v3.0</p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <footer class="flex justify-between items-end pointer-events-auto">
+        <div class="flex flex-col md:flex-row gap-4 md:gap-6 text-cyan-100/50 text-xs font-mono">
+          <div class="flex flex-col gap-1">
+            <span class="uppercase text-cyan-600">Renderer</span>
+            <span>THREE.JS r160</span>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="uppercase text-cyan-600">Particle Count</span>
+            <span id="particle-count" class="uppercase text-white">52,900</span>
+          </div>
+        </div>
+
+        <div class="flex gap-2 md:gap-4">
+           <div class="flex items-center gap-2 text-cyan-300/80 bg-black/20 p-2 rounded backdrop-blur-sm border border-white/5">
+              <span class="text-xs font-bold">FPS: <span id="fps-counter">60</span></span>
+           </div>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Application Logic -->
+    <script type="module">
+      import * as THREE from 'three';
+      import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+      import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+      import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+      import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+
+      // --- CONFIGURATION ---
+      const config = {
+        quality: 'medium', // low, medium, high, shigh
+        speed: 0.5,
+        waveHeight: 1.5,
+        particleSize: 4.0,
+        colorIntensity: 2.0,
+        colors: {
+          deep: '#000d33',
+          mid: '#0080cc',
+          high: '#99e6ff'
+        }
+      };
+
+      // --- SHADERS ---
+      const vertexShader = `
+      uniform float uTime;
+      uniform float uSize;
+      uniform float uWaveHeight;
+      uniform float uSpeed;
+      uniform float uPixelRatio;
+      uniform vec3 uMouse; // x,y, strength
+
+      varying float vElevation;
+      varying float vDistance;
+
+      // Simplex Noise
+      vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+
+      float snoise(vec2 v) {
+        const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+        vec2 i  = floor(v + dot(v, C.yy) );
+        vec2 x0 = v - i + dot(i, C.xx);
+        vec2 i1;
+        i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+        vec4 x12 = x0.xyxy + C.xxzz;
+        x12.xy -= i1;
+        i = mod289(i);
+        vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 )) + i.x + vec3(0.0, i1.x, 1.0 ));
+        vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+        m = m*m ;
+        m = m*m ;
+        vec3 x = 2.0 * fract(p * C.www) - 1.0;
+        vec3 h = abs(x) - 0.5;
+        vec3 ox = floor(x + 0.5);
+        vec3 a0 = x - ox;
+        m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+        vec3 g;
+        g.x  = a0.x  * x0.x  + h.x  * x0.y;
+        g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+        return 130.0 * dot(m, g);
+      }
+
+      void main() {
+        vec3 pos = position;
+        float time = uTime * uSpeed;
+        
+        float bigWave = sin(pos.x * 0.05 + time * 0.5) * sin(pos.y * 0.05 + time * 0.5) * uWaveHeight * 2.0;
+        float noise = snoise(pos.xy * 0.15 + time * 0.2) * uWaveHeight;
+        float rolling = sin(pos.x * 0.1 + pos.y * 0.05 + time) * 0.5;
+
+        // Interaction
+        float dist = distance(pos.xy, uMouse.xy);
+        float interaction = smoothstep(25.0, 0.0, dist);
+        float mouseLift = interaction * 12.0 * uMouse.z;
+
+        float elevation = bigWave + noise + rolling + mouseLift;
+        pos.z += elevation;
+        vElevation = elevation;
+
+        vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+        vDistance = -mvPosition.z;
+
+        float depth = max(-mvPosition.z, 0.1); 
+        gl_PointSize = uSize * uPixelRatio * (150.0 / depth);
+        gl_PointSize = max(gl_PointSize, 2.0);
+      }
+      `;
+
+      const fragmentShader = `
+      uniform float uColorIntensity;
+      uniform vec3 uColorDeep;
+      uniform vec3 uColorMid;
+      uniform vec3 uColorHigh;
+
+      varying float vElevation;
+      varying float vDistance;
+
+      void main() {
+        float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
+        float alpha = smoothstep(0.5, 0.0, distanceToCenter);
+
+        if (alpha < 0.01) discard;
+
+        vec3 colorDeep = uColorDeep;
+        vec3 colorMid = uColorMid;
+        vec3 colorHigh = uColorHigh;
+        
+        float mixLevel = (vElevation + 2.0) / 4.0;
+        vec3 color = mix(colorDeep, colorMid, smoothstep(0.0, 0.5, mixLevel));
+        color = mix(color, colorHigh, smoothstep(0.6, 1.0, mixLevel));
+
+        float fog = smoothstep(150.0, 50.0, vDistance);
+        vec3 finalColor = color * uColorIntensity;
+        
+        gl_FragColor = vec4(finalColor, alpha * fog);
+      }
+      `;
+
+      // --- INIT ENGINE ---
+      const container = document.getElementById('canvas-container');
+      const particleCountDisplay = document.getElementById('particle-count');
+      const fpsDisplay = document.getElementById('fps-counter');
+
+      // Scene Setup
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color('#050505');
+
+      // Camera
+      const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 60, 80);
+
+      // Renderer
+      const renderer = new THREE.WebGLRenderer({ 
+        powerPreference: "high-performance",
+        antialias: false, 
+        alpha: false 
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      if (container) container.appendChild(renderer.domElement);
+
+      // Controls
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.maxPolarAngle = Math.PI / 2;
+      controls.minDistance = 10;
+      controls.maxDistance = 200;
+
+      // Post Processing
+      const renderScene = new RenderPass(scene, camera);
+      const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+      bloomPass.threshold = 0.15;
+      bloomPass.strength = 1.0;
+      bloomPass.radius = 0.6;
+
+      const composer = new EffectComposer(renderer);
+      composer.addPass(renderScene);
+      composer.addPass(bloomPass);
+
+      // --- INTERACTION ---
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      const interactionPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+      const target = new THREE.Vector3();
+      const mouseWorldPos = new THREE.Vector3();
+
+      window.addEventListener('mousemove', (e) => {
+        pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+        pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        
+        raycaster.setFromCamera(pointer, camera);
+        raycaster.ray.intersectPlane(interactionPlane, target);
+        mouseWorldPos.copy(target);
+      });
+
+      // --- PARTICLE SYSTEM ---
+      let particles = null;
+      let material = null;
+
+      function createParticles(quality) {
+        if (particles) {
+          scene.remove(particles);
+          particles.geometry.dispose();
+        }
+
+        if (material) {
+          material.dispose();
+          material = null;
+        }
+
+        let segments;
+        let sizeMult;
+        
+        if (quality === 'low') {
+          segments = 150; 
+          sizeMult = 1.5;
+        } else if (quality === 'medium') {
+          segments = 230; 
+          sizeMult = 1.0;
+        } else if (quality === 'high') {
+          segments = 316; 
+          sizeMult = 0.8;
+        } else {
+          // S-High
+          segments = 450; 
+          sizeMult = 0.7;
+        }
+
+        const count = segments * segments;
+        if (particleCountDisplay) particleCountDisplay.innerText = count.toLocaleString();
+
+        const geometry = new THREE.PlaneGeometry(140, 140, segments, segments);
+
+        const uniforms = {
+          uTime: { value: 0 },
+          uSize: { value: config.particleSize * sizeMult },
+          uSpeed: { value: config.speed },
+          uWaveHeight: { value: config.waveHeight },
+          uColorIntensity: { value: config.colorIntensity },
+          uPixelRatio: { value: renderer.getPixelRatio() },
+          uMouse: { value: new THREE.Vector3() },
+          uColorDeep: { value: new THREE.Color(config.colors.deep) },
+          uColorMid: { value: new THREE.Color(config.colors.mid) },
+          uColorHigh: { value: new THREE.Color(config.colors.high) }
+        };
+
+        material = new THREE.ShaderMaterial({
+          vertexShader,
+          fragmentShader,
+          uniforms,
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending
+        });
+
+        particles = new THREE.Points(geometry, material);
+        particles.rotation.x = -Math.PI / 2.2;
+        scene.add(particles);
+      }
+
+      createParticles('medium');
+
+      // --- EVENTS ---
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        composer.setSize(window.innerWidth, window.innerHeight);
+        if(material) material.uniforms.uPixelRatio.value = renderer.getPixelRatio();
+      });
+
+      const btns = {
+        low: document.getElementById('q-low'),
+        medium: document.getElementById('q-medium'),
+        high: document.getElementById('q-high'),
+        shigh: document.getElementById('q-shigh')
+      };
+
+      function setActive(lvl) {
+        Object.values(btns).forEach(b => b && b.classList.remove('active'));
+        const btn = btns[lvl];
+        if (btn) btn.classList.add('active');
+        config.quality = lvl;
+        createParticles(lvl);
+      }
+
+      if (btns.low) btns.low.addEventListener('click', () => setActive('low'));
+      if (btns.medium) btns.medium.addEventListener('click', () => setActive('medium'));
+      if (btns.high) btns.high.addEventListener('click', () => setActive('high'));
+      if (btns.shigh) btns.shigh.addEventListener('click', () => setActive('shigh'));
+
+      const btnSettings = document.getElementById('btn-settings');
+      const btnCloseSettings = document.getElementById('btn-close-settings');
+      const settingsPanel = document.getElementById('settings-panel');
+
+      if (btnSettings && settingsPanel) {
+        btnSettings.addEventListener('click', () => settingsPanel.classList.remove('translate-x-full'));
+      }
+      if (btnCloseSettings && settingsPanel) {
+        btnCloseSettings.addEventListener('click', () => settingsPanel.classList.add('translate-x-full'));
+      }
+
+      const colorInputs = {
+        deep: document.getElementById('col-deep'),
+        mid: document.getElementById('col-mid'),
+        high: document.getElementById('col-high')
+      };
+      const hexLabels = {
+        deep: document.getElementById('hex-deep'),
+        mid: document.getElementById('hex-mid'),
+        high: document.getElementById('hex-high')
+      };
+
+      function updateColor(key, hex) {
+        config.colors[key] = hex;
+        const label = hexLabels[key];
+        if(label) label.innerText = hex.toUpperCase();
+        if (material) {
+          if (key === 'deep') material.uniforms.uColorDeep.value.set(hex);
+          if (key === 'mid') material.uniforms.uColorMid.value.set(hex);
+          if (key === 'high') material.uniforms.uColorHigh.value.set(hex);
+        }
+      }
+
+      if (colorInputs.deep) colorInputs.deep.addEventListener('input', (e) => updateColor('deep', e.target.value));
+      if (colorInputs.mid) colorInputs.mid.addEventListener('input', (e) => updateColor('mid', e.target.value));
+      if (colorInputs.high) colorInputs.high.addEventListener('input', (e) => updateColor('high', e.target.value));
+
+      // --- ANIMATION ---
+      const clock = new THREE.Clock();
+      let frames = 0;
+      let fpsTime = 0;
+
+      const currentMouse = new THREE.Vector3();
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        const elapsedTime = clock.getElapsedTime();
+        
+        if (material) {
+          material.uniforms.uTime.value = elapsedTime;
+          material.uniforms.uSpeed.value = config.speed;
+          
+          // Smooth Zen Interaction
+          currentMouse.x += (mouseWorldPos.x - currentMouse.x) * 0.05;
+          currentMouse.y += (mouseWorldPos.y - currentMouse.y) * 0.05;
+          currentMouse.z = 1.0; 
+          
+          material.uniforms.uMouse.value.set(currentMouse.x, currentMouse.y, currentMouse.z);
+        }
+
+        controls.update();
+        composer.render();
+
+        frames++;
+        const time = performance.now();
+        if (time >= fpsTime + 1000) {
+          if (fpsDisplay) fpsDisplay.innerText = Math.round((frames * 1000) / (time - fpsTime));
+          fpsTime = time;
+          frames = 0;
+        }
+      }
+
+      animate();
+    </script>
+  </body>
+</html>
