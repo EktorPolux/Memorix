@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rêve Géométrique Bleu - Zen & Futuriste</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000022;
+            cursor: none; /* On masque complètement le curseur natif */
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let mouse = { x: -9999, y: -9999 }; // Hors écran au départ pour cacher le pointeur
+        const repulsionRadius = 160;
+        const repulsionForce = 6; // Un peu plus doux
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Suivi de la souris
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        // Quand la souris quitte l'écran
+        window.addEventListener('mouseout', () => {
+            mouse.x = -9999;
+            mouse.y = -9999;
+        });
+
+        class Node {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.targetX = x;
+                this.targetY = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.radius = Math.random() * 7 + 5;
+                this.baseHue = Math.random() * 50 + 190; // Bleus plus profonds et calmes (190-240)
+                this.connections = [];
+            }
+
+            draw() {
+                // Dégradé très doux et subtil
+                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * 1.8);
+                gradient.addColorStop(0, `hsla(${this.baseHue}, 70%, 65%, 0.9)`);
+                gradient.addColorStop(0.7, `hsla(${this.baseHue + 20}, 80%, 55%, 0.4)`);
+                gradient.addColorStop(1, 'rgba(0, 30, 80, 0)');
+
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 1.8, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+
+            update() {
+                // Répulsion douce de la souris
+                const dx = this.x - mouse.x;
+                const dy = this.y - mouse.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist < repulsionRadius) {
+                    const force = (repulsionRadius - dist) / repulsionRadius * repulsionForce;
+                    this.targetX += dx / dist * force * 4;
+                    this.targetY += dy / dist * force * 4;
+                }
+
+                // Physique fluide et apaisante
+                this.vx += (this.targetX - this.x) * 0.04;
+                this.vy += (this.targetY - this.y) * 0.04;
+                this.vx *= 0.94;
+                this.vy *= 0.94;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Rebond très doux aux bords
+                if (this.x < 60) this.targetX += (60 - this.x) * 0.08;
+                if (this.x > canvas.width - 60) this.targetX -= (this.x - (canvas.width - 60)) * 0.08;
+                if (this.y < 60) this.targetY += (60 - this.y) * 0.08;
+                if (this.y > canvas.height - 60) this.targetY -= (this.y - (canvas.height - 60)) * 0.08;
+            }
+
+            connectTo(other) {
+                if (!this.connections.includes(other)) {
+                    this.connections.push(other);
+                }
+            }
+        }
+
+        let nodes = [];
+
+        function addNode() {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const node = new Node(x, y);
+            nodes.push(node);
+        }
+
+        function connectNodes() {
+            nodes.forEach(node => node.connections = []);
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const a = nodes[i];
+                    const b = nodes[j];
+                    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+                    if (dist < 190) { // Connexions un peu plus espacées pour plus de calme
+                        a.connectTo(b);
+                        b.connectTo(a);
+                    }
+                }
+            }
+        }
+
+        function drawConnections() {
+            ctx.lineWidth = 0.8; // Lignes plus fines
+            nodes.forEach(node => {
+                node.connections.forEach(other => {
+                    const dist = Math.hypot(node.x - other.x, node.y - other.y);
+                    const opacity = 1 - (dist / 190);
+                    
+                    const gradient = ctx.createLinearGradient(node.x, node.y, other.x, other.y);
+                    gradient.addColorStop(0, `hsla(${node.baseHue}, 70%, 60%, ${opacity * 0.35})`);
+                    gradient.addColorStop(1, `hsla(${other.baseHue}, 70%, 60%, ${opacity * 0.35})`);
+
+                    ctx.beginPath();
+                    ctx.moveTo(node.x, node.y);
+                    ctx.lineTo(other.x, other.y);
+                    ctx.strokeStyle = gradient;
+                    ctx.stroke();
+                });
+            });
+        }
+
+        // Pointeur zen-futuriste personnalisé
+        function drawCustomCursor() {
+            if (mouse.x < 0) return;
+
+            // Anneau extérieur très doux
+            const outerGradient = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 40);
+            outerGradient.addColorStop(0, 'rgba(100, 180, 255, 0.15)');
+            outerGradient.addColorStop(1, 'rgba(100, 180, 255, 0)');
+
+            ctx.beginPath();
+            ctx.arc(mouse.x, mouse.y, 40, 0, Math.PI * 2);
+            ctx.fillStyle = outerGradient;
+            ctx.fill();
+
+            // Anneau intérieur fin et lumineux
+            const innerGradient = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 12);
+            innerGradient.addColorStop(0, 'rgba(180, 230, 255, 0.8)');
+            innerGradient.addColorStop(0.6, 'rgba(120, 200, 255, 0.4)');
+            innerGradient.addColorStop(1, 'rgba(100, 180, 255, 0)');
+
+            ctx.beginPath();
+            ctx.arc(mouse.x, mouse.y, 12, 0, Math.PI * 2);
+            ctx.fillStyle = innerGradient;
+            ctx.fill();
+
+            // Petit point central très subtil
+            ctx.beginPath();
+            ctx.arc(mouse.x, mouse.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(200, 240, 255, 0.9)';
+            ctx.fill();
+        }
+
+        // Ajout progressif des nœuds
+        let nodeCount = 0;
+        const maxNodes = 110;
+        const addInterval = setInterval(() => {
+            if (nodeCount < maxNodes) {
+                addNode();
+                nodeCount++;
+            } else {
+                clearInterval(addInterval);
+            }
+        }, 180);
+
+        setInterval(connectNodes, 1000);
+
+        function animate() {
+            // Traînée encore plus douce pour un rendu zen
+            ctx.fillStyle = 'rgba(0, 0, 34, 0.06)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            connectNodes();
+            drawConnections();
+
+            nodes.forEach(node => {
+                node.update();
+                node.draw();
+            });
+
+            drawCustomCursor(); // Dessine le pointeur personnalisé par-dessus
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
