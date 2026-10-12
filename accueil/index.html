@@ -29,7 +29,7 @@ body{
 #bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;}
 main{
   position:relative;z-index:1;
-  width:100%;max-width:1120px;
+  width:100%;max-width:1040px;
   padding:72px 24px;
 }
 header{text-align:center;margin-bottom:64px;}
@@ -53,10 +53,6 @@ h1{
 @media(min-width:760px){
   .cards{grid-template-columns:1fr 1fr;gap:28px;}
   .card:last-child:nth-child(odd){grid-column:1/-1;min-height:0;}
-}
-@media(min-width:1060px){
-  .cards{grid-template-columns:repeat(3,1fr);}
-  .card:last-child:nth-child(odd){grid-column:auto;min-height:300px;}
 }
 
 .card{
@@ -98,6 +94,7 @@ h1{
 .memorix{--c:#818cf8;}
 .formes{--c:#f0b800;}
 .reve{--c:#4fc3f7;}
+.lumina{--c:#2dd4bf;}
 
 footer{
   margin-top:56px;text-align:center;
@@ -154,6 +151,16 @@ footer{
         et s'écartent de ton curseur. Bouge doucement, rien ne presse.
       </p>
       <p class="go"><span>Effleurer →</span></p>
+    </a>
+
+    <a class="card lumina" href="../lumina-coast/">
+      <p class="num">04 · Art interactif · WebGL</p>
+      <h2>Lumina<br>Coast</h2>
+      <p>
+        Une mer de plus de 50 000 particules qui ondule en 3D.
+        Tourne autour, soulève les vagues avec ton curseur, change les couleurs.
+      </p>
+      <p class="go"><span>Plonger →</span></p>
     </a>
   </nav>
 
