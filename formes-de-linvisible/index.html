@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formes de l'Invisible — Équations Pures</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Mono:wght@300;400&display=swap');
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;scroll-snap-type:y mandatory;}
+body{background:#020007;color:#ede8ff;font-family:'DM Mono',monospace;overflow-x:hidden;}
+
+.s{
+  height:100vh;min-height:600px;
+  position:relative;display:flex;align-items:center;
+  overflow:hidden;scroll-snap-align:start;
+}
+.s canvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
+
+.panel{
+  position:relative;z-index:10;
+  width:min(390px,calc(100vw - 48px));
+  padding:44px 40px;margin:60px 68px;
+  background:rgba(2,0,10,0.80);
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  border:1px solid rgba(255,255,255,0.055);
+}
+.s:nth-child(even) .panel{margin-left:auto;}
+
+.pnum{font-size:9px;letter-spacing:6px;text-transform:uppercase;margin-bottom:16px;opacity:.4;}
+.ptitle{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(34px,4.2vw,56px);
+  font-style:italic;font-weight:300;
+  line-height:1.05;margin-bottom:20px;color:#fff;
+}
+.peq{
+  font-size:10px;line-height:2.05;padding:13px 17px;
+  border-left:2.5px solid;margin-bottom:20px;
+  background:rgba(0,0,0,.38);letter-spacing:.25px;white-space:pre-line;
+}
+.pdesc{font-size:10.5px;line-height:2.3;color:rgba(237,232,255,.5);}
+.pdesc strong{color:rgba(237,232,255,.9);font-weight:400;}
+.pdesc em{font-style:italic;opacity:.85;}
+
+/* HERO */
+#hero{
+  height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;scroll-snap-align:start;
+}
+#hero canvas{position:absolute;inset:0;width:100%;height:100%;}
+.hi{position:relative;z-index:10;padding:0 24px;}
+.hpre{font-size:9px;letter-spacing:8px;text-transform:uppercase;color:rgba(237,232,255,.22);margin-bottom:30px;}
+.ht1{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(72px,13vw,152px);
+  font-style:italic;font-weight:300;line-height:.88;color:#fff;margin-bottom:8px;
+}
+.ht2{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(20px,3.5vw,44px);
+  font-weight:300;color:rgba(237,232,255,.28);margin-bottom:56px;letter-spacing:3px;
+}
+.hsub{font-size:10px;letter-spacing:1.5px;color:rgba(237,232,255,.18);line-height:2.5;}
+.hscroll{
+  position:absolute;bottom:42px;
+  font-size:8px;letter-spacing:5px;text-transform:uppercase;
+  color:rgba(237,232,255,.18);
+  animation:sb 3s ease-in-out infinite;
+}
+@keyframes sb{0%,100%{opacity:.18;transform:translateY(0);}50%{opacity:.35;transform:translateY(7px);}}
+
+@media(max-width:640px){
+  .panel{margin:20px;width:calc(100vw - 40px);padding:26px 22px;}
+  .s:nth-child(even) .panel{margin-left:20px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HERO ═══ -->
+<section id="hero">
+  <canvas id="cv0"></canvas>
+  <div class="hi">
+    <p class="hpre">Mathématiques Pures · Six Équations · Six Univers</p>
+    <h1 class="ht1">Formes de<br>l'Invisible</h1>
+    <p class="ht2">Ce que les équations voient, et nous non.</p>
+    <p class="hsub">
+      Ces surfaces n'ont jamais été construites à la main.<br>
+      Elles émergent d'équations — et seulement d'équations.<br>
+      Invisibles à l'œil nu. Inimaginables sans algorithme.
+    </p>
+  </div>
+  <p class="hscroll">↓ &nbsp; défiler &nbsp; ↓</p>
+</section>
+
+<!-- ═══ 01 ENNEPER ═══ -->
+<section class="s" style="background:radial-gradient(ellipse 90% 80% at 70% 50%,rgba(45,24,0,.65),#020007)">
+  <canvas id="cv1"></canvas>
+  <div class="panel">
+    <p class="pnum" style="color:#f0b800">Surface Minimale · 01 · Enneper 1864</p>
+    <h2 class="ptitle">La Surface<br>d'Enneper</h2>
+    <div class="peq" style="border-color:#f0b800;color:#f0b800">x = u(1 − u²/3 + v²)
+y = −v(1 − v²/3 + u²)
+z = u² − v²</div>
+    <p class="pdesc">
+      Alfred Enneper, 1864. <strong>La courbure moyenne H est nulle en tout point</strong>
+      — comme une membrane de savon tendue sur un fil imaginaire.
+      <br><br>
+      Elle se traverse elle-même, formant un nœud d'auto-intersection au centre.
+      <em>Ordonnée, symétrique, pourtant impossible à visualiser sans calcul.</em>
+      <br><br>
+      C'est la plus simple des surfaces minimales non planes. Quatre lobes dorés
+      qui se recourbent vers eux-mêmes dans un mouvement éternel.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 02 HOPF ═══ -->
+<section class="s" style="background:radial-gradient(ellipse 90% 80% at 30% 50%,rgba(0,25,48,.65),#020007)">
+  <canvas id="cv2"></canvas>
+  <div class="panel">
+    <p class="pnum" style="color:#00d4ff">Fibration 4D → 3D · 02 · Hopf 1931</p>
+    <h2 class="ptitle">La Fibration<br>de Hopf</h2>
+    <div class="peq" style="border-color:#00d4ff;color:#00d4ff">S³ → S²
+γ(t) = ( cos(θ/2)·eⁱᵗ, sin(θ/2)·eⁱ⁽φ⁺ᵗ⁾ )
+Proj. stéréo : (a,b,c,d) → (a,b,c)/(1−d)</div>
+    <p class="pdesc">
+      Heinz Hopf, 1931. <strong>Chaque point de la 2-sphère est l'image
+      d'un cercle entier de la 3-sphère.</strong>
+      <br><br>
+      Ces cercles remplissent tout l'espace sans jamais se toucher,
+      sans jamais se croiser. <em>Chaque paire de cercles est enlacée —
+      exactement comme deux anneaux indissociables.</em>
+      <br><br>
+      Impossible à voir depuis notre espace. La projection stéréographique
+      en révèle l'ombre — et cette ombre est déjà sublime.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 03 RÖSSLER ═══ -->
+<section class="s" style="background:radial-gradient(ellipse 90% 80% at 70% 50%,rgba(48,0,18,.65),#020007)">
+  <canvas id="cv3"></canvas>
+  <div class="panel">
+    <p class="pnum" style="color:#ff3d8a">Attracteur Étrange · 03 · Rössler 1976</p>
+    <h2 class="ptitle">L'Attracteur<br>de Rössler</h2>
+    <div class="peq" style="border-color:#ff3d8a;color:#ff3d8a">dx/dt = −y − z
+dy/dt = x + 0.2y
+dz/dt = 0.2 + z(x − 5.7)</div>
+    <p class="pdesc">
+      Otto Rössler, 1976. Plus simple que Lorenz. Plus pur.
+      <strong>Trois équations. Un chaos absolu.</strong>
+      <br><br>
+      La trajectoire s'enroule autour du centre, s'échappe soudainement,
+      revient — <em>jamais sur le même chemin.</em>
+      <br><br>
+      Dimension fractale : 2.01. Presque une surface. Jamais tout à fait.
+      Le dessin s'écrit en temps réel sous vos yeux — et ne se répète jamais.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 04 MORPHOSE MINIMALE ═══ -->
+<section class="s" style="background:radial-gradient(ellipse 90% 80% at 30% 50%,rgba(0,28,14,.65),#020007)">
+  <canvas id="cv4"></canvas>
+  <div class="panel">
+    <p class="pnum" style="color:#00e880">Isomorphe · 04 · Meusnier 1776</p>
+    <h2 class="ptitle">L'Isomorphe<br>Minimal</h2>
+    <div class="peq" style="border-color:#00e880;color:#00e880">x = cosα·coshv·cosu + sinα·sinhv·sinu
+y = cosα·coshv·sinu − sinα·sinhv·cosu
+z = u·cosα + v·sinα</div>
+    <p class="pdesc">
+      Meusnier, 1776. <strong>L'hélicoïde (α=π/2) et la caténoïde (α=0)
+      sont les deux seules surfaces minimales réglées.</strong>
+      <br><br>
+      Reliées par une déformation isométrique continue — même
+      métrique intérieure, géométrie totalement différente.
+      <em>Une vis qui devient un entonnoir. Identiques en mesure. Opposées en forme.</em>
+      <br><br>
+      Le paramètre α oscille lentement. Regardez la surface se dissoudre
+      et se reformer dans une autre vérité.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 05 LISSAJOUS 4D ═══ -->
+<section class="s" style="background:radial-gradient(ellipse 90% 80% at 70% 50%,rgba(20,0,48,.65),#020007)">
+  <canvas id="cv5"></canvas>
+  <div class="panel">
+    <p class="pnum" style="color:#a855f7">Trajectoire 4D · 05 · Quaternionique</p>
+    <h2 class="ptitle">Le Lissajous<br>Quaternionique</h2>
+    <div class="peq" style="border-color:#a855f7;color:#a855f7">x=cos(t)  y=cos(φt)  z=cos(πt/2)  w=cos(et/3)
+x' = x·cosψ − w·sinψ  (rotation 4D)
+ψ(t) = 0.05t  →  silhouette toujours nouvelle</div>
+    <p class="pdesc">
+      Fréquences : <strong>1, φ=(1+√5)/2, π/2, e/3</strong>.
+      Aucun rapport rationnel entre elles.
+      <br><br>
+      La courbe explore l'espace en 4 dimensions <em>sans jamais repasser
+      au même endroit</em>. Le théorème de Kronecker le garantit : infiniment dense.
+      <br><br>
+      La projection tourne lentement — révélant une silhouette toujours
+      différente d'une même vérité cachée à 4 dimensions.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 06 KLEIN ═══ -->
+<section class="s" style="background:radial-gradient(ellipse 90% 80% at 30% 50%,rgba(44,14,0,.65),#020007)">
+  <canvas id="cv6"></canvas>
+  <div class="panel">
+    <p class="pnum" style="color:#ff7520">Topologie · 06 · Klein 1882</p>
+    <h2 class="ptitle">La Bouteille<br>de Klein</h2>
+    <div class="peq" style="border-color:#ff7520;color:#ff7520">r = 2 + cos(u/2)·sin(v) − sin(u/2)·sin(2v)
+x = r·cos(u)
+y = r·sin(u)
+z = sin(u/2)·sin(v) + cos(u/2)·sin(2v)</div>
+    <p class="pdesc">
+      Felix Klein, 1882. <strong>Une surface sans intérieur ni extérieur.</strong>
+      Pour exister en 3D, elle doit obligatoirement se traverser elle-même.
+      <br><br>
+      Nombre d'Euler : 0. Non-orientable. Groupe fondamental : ℤ ⋊ ℤ.
+      <em>Le liquide versé dedans est déjà dehors.</em>
+      <br><br>
+      Elle n'est pas une bouteille. Elle n'a pas de fond. Elle ne délimite rien.
+      Elle est — et c'est suffisant.
+    </p>
+  </div>
+</section>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════
+//  MATH 3D
+// ═══════════════════════════════════════════════
+const rx=(p,a)=>{const c=Math.cos(a),s=Math.sin(a);return[p[0],p[1]*c-p[2]*s,p[1]*s+p[2]*c];};
+const ry=(p,a)=>{const c=Math.cos(a),s=Math.sin(a);return[p[0]*c+p[2]*s,p[1],-p[0]*s+p[2]*c];};
+function prj(p,W,H,fov=420){const sc=fov/(fov-p[2]*.52);return[W*.5+p[0]*sc,H*.5+p[1]*sc,p[2]];}
+function clamp(x,a,b){return Math.max(a,Math.min(b,x));}
+
+// ─── surface grid renderer ───────────────────
+function drawSurface(ctx,W,H,pts,nu,nv,getColor,fov=420){
+  ctx.lineWidth=1.1;
+  // horizontal lines
+  for(let i=0;i<nu;i++){
+    ctx.beginPath();
+    let zSum=0;
+    for(let j=0;j<nv;j++){
+      const[px,py,pz]=prj(pts[i*nv+j],W,H,fov);
+      zSum+=pz;
+      j===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    }
+    const avg=zSum/nv;
+    ctx.strokeStyle=getColor(i/nu,avg);
+    ctx.stroke();
+  }
+  // vertical lines
+  for(let j=0;j<nv;j++){
+    ctx.beginPath();
+    let zSum=0;
+    for(let i=0;i<nu;i++){
+      const[px,py,pz]=prj(pts[i*nv+j],W,H,fov);
+      zSum+=pz;
+      i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    }
+    const avg=zSum/nu;
+    ctx.strokeStyle=getColor(j/nv,avg);
+    ctx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  VIZ 0 — HERO : nebula de lissajous doux
+// ═══════════════════════════════════════════════
+const heroState={pts:[],s:0};
+function drawHero(ctx,W,H,t){
+  ctx.fillStyle='rgba(2,0,7,.92)';ctx.fillRect(0,0,W,H);
+  const phi=(1+Math.sqrt(5))/2;
+  const dt=0.018;
+  for(let k=0;k<4;k++){
+    heroState.s+=dt;
+    const s=heroState.s;
+    const x=Math.cos(s)*W*.38+W*.5;
+    const y=Math.cos(phi*s)*H*.35+H*.5;
+    heroState.pts.push([x,y]);
+    if(heroState.pts.length>1800)heroState.pts.shift();
+  }
+  if(heroState.pts.length<2)return;
+  ctx.save();
+  ctx.shadowBlur=14;ctx.shadowColor='rgba(120,80,255,.6)';
+  for(let i=1;i<heroState.pts.length;i++){
+    const alpha=i/heroState.pts.length;
+    ctx.beginPath();
+    ctx.moveTo(heroState.pts[i-1][0],heroState.pts[i-1][1]);
+    ctx.lineTo(heroState.pts[i][0],heroState.pts[i][1]);
+    ctx.strokeStyle=`rgba(${Math.floor(100+80*Math.sin(i*.01))},${Math.floor(60+60*Math.cos(i*.007))},${Math.floor(200+55*Math.sin(i*.013))},${alpha*.55})`;
+    ctx.lineWidth=.7+alpha*1.0;
+    ctx.stroke();
+  }
+  ctx.restore();
+  // faint title hint: nothing, let CSS text shine
+}
+
+// ═══════════════════════════════════════════════
+//  VIZ 1 — ENNEPER
+// ═══════════════════════════════════════════════
+function drawEnneper(ctx,W,H,t){
+  ctx.fillStyle='rgba(2,0,7,.93)';ctx.fillRect(0,0,W,H);
+  const n=34,sc=Math.min(W,H)*.135;
+  const pts=[];
+  for(let i=0;i<n;i++){
+    for(let j=0;j<n;j++){
+      const u=-1.78+(i/(n-1))*3.56;
+      const v=-1.78+(j/(n-1))*3.56;
+      let p=[
+        sc*(u-u*u*u/3+u*v*v),
+        sc*(-(v-v*v*v/3+v*u*u)),
+        sc*(u*u-v*v)
+      ];
+      p=ry(p,t*.22);p=rx(p,t*.12+.4);
+      pts.push(p);
+    }
+  }
+  ctx.save();ctx.shadowBlur=9;ctx.shadowColor='rgba(240,184,0,.7)';
+  function enColor(k,z){
+    const d=clamp((z+sc*2)/(sc*4),.05,1);
+    const b=Math.floor(30+140*k);
+    return`rgba(240,${b},0,${.15+.75*d})`;
+  }
+  drawSurface(ctx,W,H,pts,n,n,enColor);
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════
+//  VIZ 2 — HOPF FIBRATION
+// ═══════════════════════════════════════════════
+function drawHopf(ctx,W,H,t){
+  ctx.fillStyle='rgba(2,0,7,.93)';ctx.fillRect(0,0,W,H);
+  const N_fib=26, N_pts=90;
+  const sc=Math.min(W,H)*.26;
+  const goldenA=2.39996;
+  ctx.save();
+  ctx.shadowBlur=11;ctx.shadowColor='rgba(0,210,255,.65)';
+  ctx.lineWidth=1.1;
+  for(let fi=0;fi<N_fib;fi++){
+    const theta=.45+(fi/(N_fib-1))*1.65;  // θ ∈ [0.45, 2.1]
+    const phi_base=fi*goldenA;
+    const cHalf=Math.cos(theta*.5), sHalf=Math.sin(theta*.5);
+    const frac=fi/(N_fib-1); // 0..1
+    const r=Math.floor(0+50*frac);
+    const g=Math.floor(170+85*frac);
+    const b=255;
+    ctx.beginPath();
+    let first=true;
+    for(let pi=0;pi<=N_pts;pi++){
+      const tp=pi/N_pts*Math.PI*2;
+      const a=cHalf*Math.cos(tp);
+      const bv=cHalf*Math.sin(tp);
+      const c=sHalf*Math.cos(phi_base+tp);
+      const d=sHalf*Math.sin(phi_base+tp);
+      const denom=1-d;
+      if(Math.abs(denom)<.02)continue;
+      let p=[a/denom*sc, bv/denom*sc, c/denom*sc];
+      p=ry(p,t*.18);p=rx(p,t*.11+.3);
+      const[px,py,pz]=prj(p,W,H,500);
+      const depth=clamp((pz+sc*3)/(sc*6),.05,1);
+      if(first){ctx.moveTo(px,py);first=false;}else ctx.lineTo(px,py);
+    }
+    ctx.strokeStyle=`rgba(${r},${g},${b},${.2+.65*(fi/N_fib)})`;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════
+//  VIZ 3 — RÖSSLER
+// ═══════════════════════════════════════════════
+const rosslerState={x:1,y:0,z:0,pts:[]};
+function drawRossler(ctx,W,H,t){
+  ctx.fillStyle='rgba(2,0,7,.93)';ctx.fillRect(0,0,W,H);
+  const rs=rosslerState;
+  const sc=Math.min(W,H)*.065;
+  const dt=0.015;
+  for(let k=0;k<7;k++){
+    const{x,y,z}=rs;
+    rs.x+=(-y-z)*dt;
+    rs.y+=(x+.2*y)*dt;
+    rs.z+=(.2+z*(x-5.7))*dt;
+    let p=[rs.x*sc, rs.y*sc, rs.z*sc];
+    p=ry(p,.5);p=rx(p,.25);
+    rs.pts.push(p);
+    if(rs.pts.length>2600)rs.pts.shift();
+  }
+  if(rs.pts.length<2)return;
+  ctx.save();
+  ctx.lineWidth=1.1;
+  ctx.shadowBlur=12;ctx.shadowColor='rgba(255,50,130,.7)';
+  for(let i=1;i<rs.pts.length;i++){
+    const alpha=i/rs.pts.length;
+    const[px,py]=prj(rs.pts[i],W,H,500);
+    const[ppx,ppy]=prj(rs.pts[i-1],W,H,500);
+    ctx.beginPath();
+    ctx.moveTo(ppx,ppy);ctx.lineTo(px,py);
+    const hue=320+40*Math.sin(i*.0025);
+    ctx.strokeStyle=`hsla(${hue},100%,60%,${.08+.82*alpha*alpha})`;
+    ctx.stroke();
+  }
+  // draw last segment tip bright
+  const tip=rs.pts[rs.pts.length-1];
+  const[tx,ty]=prj(tip,W,H,500);
+  ctx.shadowBlur=22;ctx.shadowColor='#fff';
+  ctx.beginPath();ctx.arc(tx,ty,3,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,200,230,.95)';ctx.fill();
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════
+//  VIZ 4 — HÉLICOÏDE ↔ CATÉNOÏDE
+// ═══════════════════════════════════════════════
+function drawMinimal(ctx,W,H,t){
+  ctx.fillStyle='rgba(2,0,7,.93)';ctx.fillRect(0,0,W,H);
+  const n=32,sc=Math.min(W,H)*.09;
+  const alpha=(Math.sin(t*.32)*.5+.5)*Math.PI*.5; // 0 → π/2
+  const pts=[];
+  for(let i=0;i<n;i++){
+    for(let j=0;j<n;j++){
+      const u=-Math.PI*1.6+(i/(n-1))*Math.PI*3.2;
+      const v=-2+(j/(n-1))*4;
+      const ca=Math.cos(alpha),sa=Math.sin(alpha);
+      const ch=Math.cosh(v),sh=Math.sinh(v);
+      let p=[
+        sc*(ca*ch*Math.cos(u)+sa*sh*Math.sin(u)),
+        sc*(ca*ch*Math.sin(u)-sa*sh*Math.cos(u)),
+        sc*(u*ca+v*sa)
+      ];
+      p=ry(p,t*.28);p=rx(p,t*.1+.2);
+      pts.push(p);
+    }
+  }
+  ctx.save();ctx.shadowBlur=9;ctx.shadowColor='rgba(0,230,120,.65)';
+  function minColor(k,z){
+    const d=clamp((z+sc*5)/(sc*10),.05,1);
+    const g=Math.floor(170+85*k);
+    return`rgba(0,${g},80,${.12+.72*d})`;
+  }
+  drawSurface(ctx,W,H,pts,n,n,minColor,500);
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════
+//  VIZ 5 — LISSAJOUS QUATERNIONIQUE
+// ═══════════════════════════════════════════════
+const lissState={pts:[],s:0};
+function drawLissajous(ctx,W,H,t){
+  ctx.fillStyle='rgba(2,0,7,.93)';ctx.fillRect(0,0,W,H);
+  const phi=(1+Math.sqrt(5))*.5;
+  const sc=Math.min(W,H)*.36;
+  const dt=.045;
+  const psi=t*.045; // 4D rotation angle
+  for(let k=0;k<5;k++){
+    lissState.s+=dt;
+    const s=lissState.s;
+    const x=Math.cos(s);
+    const y=Math.cos(phi*s);
+    const z=Math.cos(Math.PI*.5*s);
+    const w=Math.cos(Math.E/3*s);
+    // rotate in (x,w) plane
+    const xp=x*Math.cos(psi)-w*Math.sin(psi);
+    let p=[xp*sc,y*sc,z*sc];
+    p=ry(p,t*.18);p=rx(p,t*.08);
+    lissState.pts.push(p);
+    if(lissState.pts.length>2800)lissState.pts.shift();
+  }
+  if(lissState.pts.length<2)return;
+  ctx.save();ctx.lineWidth=1.1;
+  ctx.shadowBlur=10;ctx.shadowColor='rgba(168,85,247,.7)';
+  for(let i=1;i<lissState.pts.length;i++){
+    const alpha=i/lissState.pts.length;
+    const[px,py]=prj(lissState.pts[i],W,H,500);
+    const[ppx,ppy]=prj(lissState.pts[i-1],W,H,500);
+    ctx.beginPath();ctx.moveTo(ppx,ppy);ctx.lineTo(px,py);
+    const hue=260+60*Math.sin(i*.003);
+    ctx.strokeStyle=`hsla(${hue},80%,68%,${.05+.75*alpha*alpha})`;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════
+//  VIZ 6 — BOUTEILLE DE KLEIN
+// ═══════════════════════════════════════════════
+function drawKlein(ctx,W,H,t){
+  ctx.fillStyle='rgba(2,0,7,.93)';ctx.fillRect(0,0,W,H);
+  const n=44,sc=Math.min(W,H)*.115;
+  const pts=[];
+  for(let i=0;i<n;i++){
+    for(let j=0;j<n;j++){
+      const u=(i/(n-1))*Math.PI*2;
+      const v=(j/(n-1))*Math.PI*2;
+      const cu2=Math.cos(u*.5),su2=Math.sin(u*.5);
+      const sv=Math.sin(v),s2v=Math.sin(2*v);
+      const r=2+cu2*sv-su2*s2v;
+      let p=[
+        sc*r*Math.cos(u),
+        sc*r*Math.sin(u),
+        sc*(su2*sv+cu2*s2v)
+      ];
+      p=ry(p,t*.22);p=rx(p,t*.13+.5);
+      pts.push(p);
+    }
+  }
+  ctx.save();ctx.shadowBlur=9;ctx.shadowColor='rgba(255,117,32,.65)';
+  function kleinColor(k,z){
+    const d=clamp((z+sc*3.5)/(sc*7),.05,1);
+    const rr=Math.floor(200+55*k);
+    const gg=Math.floor(80+80*k);
+    return`rgba(${rr},${gg},0,${.1+.75*d})`;
+  }
+  drawSurface(ctx,W,H,pts,n,n,kleinColor);
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════
+//  ANIMATION LOOP
+// ═══════════════════════════════════════════════
+const vizMap={
+  cv0:drawHero,cv1:drawEnneper,cv2:drawHopf,
+  cv3:drawRossler,cv4:drawMinimal,cv5:drawLissajous,cv6:drawKlein
+};
+const active=new Set();
+
+// Init canvas sizes
+function sizeCanvas(cv){
+  const dpr=window.devicePixelRatio||1;
+  const W=cv.offsetWidth,H=cv.offsetHeight;
+  if(!W||!H)return false;
+  if(cv.width!==W*dpr||cv.height!==H*dpr){cv.width=W*dpr;cv.height=H*dpr;}
+  return true;
+}
+
+// IntersectionObserver
+const io=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting)active.add(e.target.id);
+    else active.delete(e.target.id);
+  });
+},{threshold:.05});
+
+Object.keys(vizMap).forEach(id=>{
+  const cv=document.getElementById(id);
+  if(cv)io.observe(cv);
+});
+
+let globalT=0,lastTs=0;
+function loop(ts){
+  const dt=Math.min((ts-lastTs)/1000,.05);
+  lastTs=ts;globalT+=dt;
+  active.forEach(id=>{
+    const cv=document.getElementById(id);
+    if(!cv||!sizeCanvas(cv))return;
+    const dpr=window.devicePixelRatio||1;
+    const W=cv.offsetWidth,H=cv.offsetHeight;
+    const ctx=cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    vizMap[id](ctx,W,H,globalT);
+  });
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
