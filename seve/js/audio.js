@@ -196,6 +196,26 @@ export const audio = {
     src.stop(t + dur + 0.05);
   },
 
+  // Glissando : un sifflement qui descend (les « chœurs de l'aube » sous les aurores), une sirène, un souffle
+  sweep({ from = 3000, to = 500, dur = 1.2, vel = 0.05, type = 'sine', pan = 0, send = 0.5, at = 0 } = {}) {
+    if (!this.ready || this.muted || this.voices > 26) return;
+    const ctx = this.ctx, t = ctx.currentTime + at;
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(from, t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(20, to), t + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vel, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g);
+    const made = this._send(g, pan, send, 0.12);
+    this.voices++;
+    o.start(t);
+    o.stop(t + dur + 0.05);
+    o.onended = () => { this.voices--; o.disconnect(); made.forEach(n => n.disconnect()); };
+  },
+
   // Petite fanfare cristalline : un secret vient d'être trouvé
   chime() {
     if (!this.ready) return;

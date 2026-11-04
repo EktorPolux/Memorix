@@ -1,5 +1,5 @@
 // Sève — chef d'orchestre : les lieux, les passages entre eux, et ce qui vaut partout.
-import { createEngine, makeNoise, rng, glow } from './engine.js';
+import { createEngine, makeNoise, rng, glow, TAU, rgba, mixRgb, hexToRgb } from './engine.js';
 import { audio } from './audio.js';
 import { secrets } from './secrets.js';
 import { toast, titleCard, hideTitleCard, setRealmLabel, renderCarnet, setBadge } from './ui.js';
@@ -7,7 +7,7 @@ import { toast, titleCard, hideTitleCard, setRealmLabel, renderCarnet, setBadge 
 export const REALMS = [
   { id: 'arbre', file: './realms/arbre.js', ready: true, color: '#d9c7ff', short: 'Arbre',
     kicker: 'Le carrefour', title: "L'Arbre-Monde", sub: 'Chaque fruit est un monde. Chaque secret trouvé y fait éclore une fleur.',
-    hint: ['Touche un fruit · pour voyager', 'Caresse les branches · pour faire le vent'] },
+    hint: ['Touche un fruit · pour voyager', 'Caresse les branches · pour faire le vent', 'La boussole · pour te laisser porter'] },
   { id: 'serre', file: './realms/serre.js', ready: true, color: '#9be58a', short: 'Serre',
     kicker: 'Tableau I · Végétation', title: 'La Serre aux Lianes', sub: "Elles ne savent qu'une chose : aller vers la lumière. Et la lumière, c'est toi.",
     hint: ['Bouge · la lumière', 'Touche · pour semer', 'Maintiens · pour nourrir la sève'] },
@@ -35,6 +35,15 @@ export const REALMS = [
   { id: 'alchimie', file: './realms/alchimie.js', ready: true, color: '#ff6b5a', short: 'Alchimie',
     kicker: 'Tableau IX · Matière', title: "L'Atelier d'Alchimie", sub: 'Sable, eau, feu, glace, graines : chaque rencontre change la matière.',
     hint: ['Choisis · un élément en bas', 'Dessine · pour le verser'] },
+  { id: 'aurores', file: './realms/aurores.js', ready: true, color: '#36f5a0', short: 'Aurores',
+    kicker: 'Tableau X · Lumière', title: 'Les Aurores', sub: "Le vent du Soleil glisse sur le champ de la Terre, et l'oxygène se met à chanter en vert.",
+    hint: ['Touche le ciel · pour lancer une éruption solaire', 'Glisse · pour souffler le vent solaire', 'Maintiens · pour écouter le ciel'] },
+  { id: 'fourier', file: './realms/fourier.js', ready: true, color: '#fff0b0', short: 'Fourier',
+    kicker: 'Tableau XI · Cercles', title: "L'Atelier de Fourier", sub: 'Toute forme fermée est une somme de cercles qui tournent. Dessine-en une : elle te revient en cercles, et en sons.',
+    hint: ['Dessine · une boucle', 'Touche · pour changer de forme', '♪ Écouter · pour entendre la forme'] },
+  { id: 'envol', file: './realms/envol.js', ready: true, color: '#9fb8ff', short: 'Envol',
+    kicker: 'Tableau XII · Voyage', title: "L'Envol", sub: "Un monde entier tenu dans une carte de hauteurs. Survole-le : il n'a pas de bord.",
+    hint: ['Main à gauche ou à droite · pour virer', 'Main en haut ou en bas · pour monter, descendre', 'Maintiens · pour piquer'] },
   { id: 'racines', file: './realms/racines.js', ready: true, hidden: true, color: '#b48cff', short: 'Racines',
     kicker: 'Tableau secret', title: 'Les Racines', sub: 'Sous l\'arbre, ce qui relie tout. Et tout au fond, un cœur qui bat.',
     hint: ['Promène ta lanterne', 'Touche une racine · pour y envoyer la sève', 'Touche le cœur · pour y plonger'] },
@@ -58,7 +67,11 @@ const api = {
   realms: REALMS,
   noise: makeNoise(7),
   rng, glow,
-  go(id) { if (id === 'arbre') { if (location.hash) location.hash = ''; else go('arbre'); } else location.hash = id; },
+  // from : le point de l'écran d'où part le voyage (un fruit touché), pour que l'iris s'y ouvre
+  go(id, from) {
+    pendingFrom = from || null;
+    if (id === 'arbre') { if (location.hash) location.hash = ''; else go('arbre'); } else location.hash = id;
+  },
   eclipse,
   label(text) { if (current) { current.extra = text; updateChrome(); } },
   showTitle() { if (current) titleCard(current.meta); },
@@ -83,21 +96,93 @@ function realmFromHash() {
   return r ? r.id : 'arbre';
 }
 
+// ——— Passages : un iris de la couleur du monde s'ouvre depuis le fruit touché,
+// puis le nouveau monde apparaît par le centre, comme une pupille qui se dilate
+let iris = null, pendingFrom = null;
+function drawIris(dt) {
+  if (!iris) return;
+  iris.t += dt;
+  const ctx = engine.ctx, W = engine.W, H = engine.H;
+  ctx.setTransform(engine.dpr, 0, 0, engine.dpr, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  const k = Math.min(1, iris.t / iris.dur), e = k * k * (3 - 2 * k);
+  const { x, y, c } = iris;
+  const R = Math.hypot(Math.max(x, W - x), Math.max(y, H - y)) + 24;
+  const dark = c.map(v => v * 0.1);
+  if (iris.phase === 'out') {
+    const r = Math.max(1, R * e);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, rgba(mixRgb(c, [255, 255, 255], 0.4), 1));
+    g.addColorStop(0.3, rgba(mixRgb(c, dark, 0.45), 1));
+    g.addColorStop(1, rgba(dark, 1));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = rgba(c, 0.8 * (1 - k * 0.6));
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  } else {
+    const r = R * e;
+    ctx.fillStyle = rgba(dark, 1);
+    ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.arc(x, y, Math.max(0.5, r), 0, TAU, true); ctx.fill('evenodd');
+    ctx.strokeStyle = rgba(c, 0.6 * (1 - k));
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
+    if (k >= 1) iris = null;
+  }
+}
+engine.listeners.frame.push(drawIris);
+function irisOut(from, color) {
+  iris = { phase: 'out', t: 0, dur: 0.62, x: from?.x ?? engine.W / 2, y: from?.y ?? engine.H / 2, c: hexToRgb(color) };
+  return wait(660);
+}
+function irisIn(color) { iris = { phase: 'in', t: 0, dur: 0.95, x: engine.W / 2, y: engine.H / 2, c: hexToRgb(color) }; }
+
+// ——— Le Voyage : on se laisse porter d'un tableau à l'autre
+const TOUR_STAY = 42;
+const tour = { on: false, t: 0, seen: new Set(), nav: false };
+const tourOrder = () => REALMS.filter(r => r.ready && !r.hidden && r.id !== 'arbre').map(r => r.id);
+function tourNext() {
+  const order = tourOrder();
+  const i = current ? order.indexOf(current.id) : -1;
+  tour.t = 0;
+  tour.nav = true;
+  api.go(order[(i + 1) % order.length]);
+}
+function setTour(on) {
+  tour.on = on;
+  $('btn-voyage').setAttribute('aria-pressed', String(on));
+  if (on) {
+    tour.seen.clear();
+    toast({ kicker: 'Voyage', title: 'Laisse-toi porter', text: 'Un tableau toutes les quarante secondes. Touche la boussole pour reprendre la main.', ms: 5200 });
+    tourNext();
+  }
+}
+engine.listeners.frame.push(dt => {
+  if (!tour.on || busy || !started) return;
+  tour.t += dt;
+  if (tour.t > TOUR_STAY) tourNext();
+});
+
 async function go(id, opts = {}) {
   if (busy) { pending = id; return; }
   if (id === 'arbre' && pendingRegrow) { pendingRegrow = false; opts = { ...opts, regrow: true, force: true }; }
   if (current && current.id === id && !opts.force) return;
   const meta = REALMS.find(r => r.id === id && r.ready);
   if (!meta) return;
+  // un pas fait à la main interrompt le voyage
+  if (tour.on && !tour.nav) setTour(false);
+  tour.nav = false;
   busy = true;
-  const veil = $('veil');
-  if (current) { veil.classList.add('on'); await wait(480); }
+  const from = pendingFrom;
+  pendingFrom = null;
+  if (current) await irisOut(from, meta.color);
   hideTitleCard();
   let mod;
   try { mod = await import(meta.file); } catch (err) {
     console.error(err);
     toast({ kicker: 'Passage fermé', title: meta.title, text: "Ce monde n'a pas pu pousser. Recharge la page pour réessayer." });
-    veil.classList.remove('on');
+    iris = null;
     busy = false;
     return;
   }
@@ -110,8 +195,11 @@ async function go(id, opts = {}) {
   audio.setMood(mod.mood);
   secrets.visit(id);
   updateChrome();
-  if (!opts.intro) titleCard(meta);
-  veil.classList.remove('on');
+  if (!opts.intro) { titleCard(meta); irisIn(meta.color); }
+  if (tour.on) {
+    tour.seen.add(id);
+    if (tour.seen.size >= tourOrder().length) secrets.find('voyageur');
+  }
   busy = false;
   if (pending) { const p = pending; pending = null; if (p !== id) go(p); }
 }
@@ -141,6 +229,7 @@ $('btn-sound').addEventListener('click', () => {
 });
 document.body.classList.toggle('muted', audio.muted);
 $('btn-help').addEventListener('click', () => api.showTitle());
+$('btn-voyage').addEventListener('click', () => { if (started) setTour(!tour.on); });
 const carnet = $('carnet');
 function openCarnet() {
   const shown = REALMS.filter(r => !r.hidden || r.ready).map(r => ({ ...r, locked: r.id === 'racines' && !rootsOpen() }));

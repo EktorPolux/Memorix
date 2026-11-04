@@ -40,6 +40,9 @@ body.inverse #world{filter:invert(1) hue-rotate(180deg);}
 #back{position:absolute;top:calc(16px + var(--sat));left:calc(16px + var(--sal));}
 #back:hover{transform:translateX(-2px);}
 #tools{position:absolute;top:calc(16px + var(--sat));right:calc(16px + var(--sar));display:flex;gap:8px;}
+#btn-voyage[aria-pressed=true]{border-color:var(--accent);background:var(--glass-strong);}
+#btn-voyage[aria-pressed=true] svg{animation:spin 6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 #btn-sound .off{display:none;}
 body.muted #btn-sound .on{display:none;}
 body.muted #btn-sound .off{display:block;}
@@ -135,6 +138,24 @@ body.pre #back,body.pre #tools,body.pre #realm-label{opacity:0;pointer-events:no
 .secret .x{font-size:11px;line-height:1.85;color:var(--muted);margin-top:2px;}
 .secret:not(.found) .n{color:var(--faint);}
 .secret:not(.found) .x{font-style:italic;color:var(--faint);}
+
+/* Barre d'outils propre à un tableau (posée en bas, sur le verre) */
+.realm-bar{
+  position:absolute;left:50%;bottom:calc(40px + var(--sab));transform:translateX(-50%);
+  display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;
+  width:min(900px,calc(100vw - 24px));pointer-events:auto;
+}
+.realm-bar button,.realm-bar .count{
+  display:flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:999px;
+  border:1px solid var(--line);background:var(--glass);color:var(--fg);
+  font:400 9.5px/1 var(--mono);letter-spacing:2px;text-transform:uppercase;
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+}
+.realm-bar button{cursor:pointer;}
+.realm-bar button:hover,.realm-bar button:focus-visible{border-color:var(--accent);}
+.realm-bar button[aria-pressed=true]{border-color:var(--accent);background:var(--glass-strong);color:#fff;}
+.realm-bar .count{min-width:110px;justify-content:center;border-style:dashed;}
+@media (max-width:560px){.realm-bar button,.realm-bar .count{padding:0 10px;letter-spacing:1px;}}
 
 /* Éclipse (secret) */
 #eclipse{

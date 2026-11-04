@@ -234,9 +234,11 @@ export function create(api, meta, opts = {}) {
     const topLimit = portrait ? 132 : 104;
     if (Cy - ry < topLimit) ry = Cy - topLimit;
     const used = new Set();
+    const stagger = fruits.length > 9; // beaucoup de mondes : un fruit sur deux pend un peu plus loin
     for (const f of fruits) {
-      f.rx = Cx + Math.sin(f.u) * rx;
-      f.ry = Cy - Math.cos(f.u) * ry;
+      const ring = stagger && f.idx % 2 ? 1.17 : 1;
+      f.rx = clamp(Cx + Math.sin(f.u) * rx * ring, 22, W - 22);
+      f.ry = Math.max(topLimit, Cy - Math.cos(f.u) * ry * ring);
       let best = null, bd = 1e9;
       for (const n of anchorsPool) {
         if (used.has(n)) continue;
@@ -406,6 +408,8 @@ export function create(api, meta, opts = {}) {
         ctx.fillRect(s.x * W, s.y * groundY, s.s, s.s);
       }
     }
+    // écho des Aurores : qui les a vues les retrouve, la nuit, au-dessus de l'arbre
+    if (night > 0.3 && secrets.wasVisited('aurores')) drawEchoAurora(ctx, t, night);
     const sun = astrePos(ph), moon = astrePos((ph + 0.5) % 1);
     const mr = moonImg.width / 2;
     ctx.globalCompositeOperation = 'lighter';
@@ -457,6 +461,25 @@ export function create(api, meta, opts = {}) {
 
     if (state !== 'seed') drawLabels(ctx);
     ctx.drawImage(vignette, 0, 0, W, H);
+  }
+
+  function drawEchoAurora(ctx, t, night) {
+    const k = (night - 0.3) / 0.7;
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 48; i++) {
+      const n = noise.n2(i * 0.17, t * 0.05);
+      const a = Math.max(0, n + 0.15) * 0.1 * k;
+      if (a < 0.004) continue;
+      const x = (i / 47) * W, top = H * (0.05 + 0.06 * noise.n2(i * 0.1 + 5, t * 0.03)), bottom = top + H * (0.15 + 0.08 * n);
+      const g = ctx.createLinearGradient(0, top, 0, bottom);
+      g.addColorStop(0, 'rgba(255,60,120,0)');
+      g.addColorStop(0.45, `rgba(255,70,130,${a * 0.35})`);
+      g.addColorStop(0.82, `rgba(60,255,150,${a})`);
+      g.addColorStop(1, 'rgba(60,255,150,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - W / 94, top, W / 47 + 1, bottom - top);
+    }
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   function drawHill(ctx, pts, base, amp, color, par) {
@@ -762,7 +785,7 @@ export function create(api, meta, opts = {}) {
       if (f.realm.ready) {
         audio.note(f.idx + 2, { type: 'bell', vel: 0.22, dur: 2.6, send: 0.5 });
         burst(f.x, f.y, f.color, 18, 160);
-        api.go(f.realm.id);
+        api.go(f.realm.id, { x: f.x, y: f.y });
       } else {
         audio.note(f.idx, { type: 'soft', vel: 0.1, dur: 1.6 });
         api.toast({ kicker: 'Pas encore mûr', title: f.realm.title, text: f.realm.sub + ' Ce fruit mûrit encore : reviens bientôt.', ms: 5200 });
@@ -792,7 +815,7 @@ export function create(api, meta, opts = {}) {
     // la fente entre les racines
     if (api.rootsOpen() && Math.hypot(p.x - rootX, p.y - (groundY + 18)) < 42) {
       audio.note(-3, { type: 'soft', vel: 0.14, dur: 3, oct: -1 });
-      api.go('racines');
+      api.go('racines', { x: rootX, y: groundY + 16 });
       return;
     }
     // le tronc : un cœur qui bat

@@ -8,6 +8,7 @@ export const SECRETS = [
   { id: 'konami', realm: 'monde', name: 'Le Code Ancien', text: '↑ ↑ ↓ ↓ ← → ← → B A. Le monde se retourne comme un gant, puis se remet à l\'endroit.', hint: 'Une incantation de 1986 : haut, haut, bas, bas…' },
   { id: 'patience', realm: 'monde', name: 'Patience', text: "Tu n'as rien touché depuis longtemps, et tout a continué sans toi. C'est cela, être vivant.", hint: 'Ne fais rien. Vraiment rien.' },
   { id: 'cercle', realm: 'monde', name: "L'Heure du Cercle", text: '3 h 14. π heures. Le cercle te salue.', hint: "Reviens à l'heure du cercle." },
+  { id: 'voyageur', realm: 'monde', name: 'Le Grand Tour', text: 'Tu as tout traversé sans rien toucher : le monde t\'a porté d\'un tableau à l\'autre. Certains voyages se font les mains vides.', hint: 'Laisse-toi porter jusqu\'au bout.' },
   // L'Arbre-Monde
   { id: 'seve', realm: 'arbre', name: 'La Sève', text: "Cinq battements, et la sève monte jusqu'au bout des fruits. Tout ce monde est relié par le même courant.", hint: 'Le tronc a un cœur. Fais-le battre.' },
   { id: 'voeu', realm: 'arbre', name: 'Le Vœu', text: "Tu as attrapé une étoile filante. Elle ne réalise rien, mais elle t'a vu.", hint: 'La nuit, quelque chose traverse le ciel. Attrape-le.' },
@@ -43,6 +44,18 @@ export const SECRETS = [
   // L'Atelier d'Alchimie
   { id: 'or', realm: 'alchimie', name: 'Pierre Philosophale', text: 'Terre, eau, feu, air : les quatre réunis. Les alchimistes en ont rêvé pendant mille ans.', hint: 'Réunis les quatre éléments.' },
   { id: 'fleur', realm: 'alchimie', name: 'La Première Fleur', text: 'Une graine, de l\'eau, de la lumière. La chimie la plus ancienne du monde.', hint: 'Une graine qui a soif.' },
+  // Les Aurores
+  { id: 'carrington', realm: 'aurores', name: 'La Tempête de Carrington', text: '1er septembre 1859 : Richard Carrington voit le Soleil s\'embraser. Le lendemain, des aurores jusqu\'aux Caraïbes, et les télégraphes crépitent tout seuls.', hint: 'Trois éruptions d\'affilée, et le ciel déborde.' },
+  { id: 'sifflements', realm: 'aurores', name: "Les Chœurs de l'Aube", text: 'Sous les aurores, des antennes captent des sifflements qui descendent : la foudre, qui voyage d\'un hémisphère à l\'autre le long du champ magnétique.', hint: 'Tends l\'oreille au ciel, longtemps.' },
+  { id: 'magnetosphere', realm: 'aurores', name: 'La Magnétosphère', text: 'Le vent solaire glisse sur le champ terrestre ; quelques particules spiralent jusqu\'aux pôles et font chanter l\'oxygène : vert à 557,7 nm, rouge à 630.', hint: 'Un petit globe attend dans un coin.' },
+  // L'Atelier de Fourier
+  { id: 'ptolemee', realm: 'fourier', name: 'Ptolémée', text: 'Un seul cercle, et c\'est déjà une orbite. Dans l\'Almageste (IIᵉ siècle), Ptolémée empile des cercles sur des cercles pour imiter le ciel : une série de Fourier avant l\'heure.', hint: 'Dessine la forme la plus simple qui soit.' },
+  { id: 'gibbs', realm: 'fourier', name: 'Le Phénomène de Gibbs', text: 'Aux coins du carré, la somme de cercles déborde d\'environ 9 %, et ce dépassement ne disparaît jamais, même avec mille cercles.', hint: 'Retire des cercles à un carré.' },
+  { id: 'oscilloscope', realm: 'fourier', name: 'La Voix des Formes', text: 'Gauche = x, droite = y. Branche ces deux voix sur un oscilloscope en mode XY : il redessinera ta forme. C\'est ainsi qu\'on compose la musique d\'oscilloscope.', hint: 'Une forme peut s\'écouter.' },
+  // L'Envol
+  { id: 'phare', realm: 'envol', name: 'Vu du Ciel', text: 'Tu as retrouvé l\'Arbre-Monde depuis les airs. De haut, ce n\'est qu\'une lueur ; c\'est pourtant de lui que tout part.', hint: 'Une lumière se lève quelque part au-dessus des terres.' },
+  { id: 'tore', realm: 'envol', name: 'Le Tour du Monde', text: 'Revenu à ton point de départ sans faire demi-tour. Ce monde-ci n\'est pas une sphère mais un tore : un beignet sans bord.', hint: 'Va tout droit. Très longtemps.' },
+  { id: 'rasemottes', realm: 'envol', name: 'Rase-mottes', text: 'Si bas que l\'eau t\'aurait mouillé les ailes. Les martinets dorment parfois en vol ; toi, tu frôles.', hint: 'Descends jusqu\'à frôler l\'eau.' },
   // Les Racines
   { id: 'coeur', realm: 'racines', name: 'Le Cœur du Monde', text: 'z ← z² + c. Une ligne, et une frontière infinie. Le cœur de ce monde est une équation.', hint: 'Descends tout en bas.' },
   { id: 'graine', realm: 'racines', name: "La Graine d'Or", text: 'Tu as tout trouvé. Plante-la : un autre monde poussera à partir d\'elle, différent.', hint: 'Trouve tout le reste.' },
