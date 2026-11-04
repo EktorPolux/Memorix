@@ -2,7 +2,7 @@
 // Ptolémée empilait déjà des épicycles pour imiter le ciel ; Fourier a montré qu'on peut tout imiter ainsi.
 import { TAU, clamp, glow, drawGlow, hslToRgb } from '../engine.js';
 
-export const mood = { root: 130.81, scale: 'majPenta', wave: 'sine', chord: [0, 7, 12], pad: 0.03, cutoff: 900, lfo: 0.03 };
+export const mood = { root: 130.81, scale: 'majPenta', wave: 'sine', chord: [0, 7, 12], pad: 0.03, cutoff: 900, lfo: 0.03, motif: false };
 
 const N = 256;
 const PERIOD = 14; // secondes pour que la chaîne fasse un tour

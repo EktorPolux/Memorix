@@ -56,6 +56,10 @@ export const SECRETS = [
   { id: 'phare', realm: 'envol', name: 'Vu du Ciel', text: 'Tu as retrouvé l\'Arbre-Monde depuis les airs. De haut, ce n\'est qu\'une lueur ; c\'est pourtant de lui que tout part.', hint: 'Une lumière se lève quelque part au-dessus des terres.' },
   { id: 'tore', realm: 'envol', name: 'Le Tour du Monde', text: 'Revenu à ton point de départ sans faire demi-tour. Ce monde-ci n\'est pas une sphère mais un tore : un beignet sans bord.', hint: 'Va tout droit. Très longtemps.' },
   { id: 'rasemottes', realm: 'envol', name: 'Rase-mottes', text: 'Si bas que l\'eau t\'aurait mouillé les ailes. Les martinets dorment parfois en vol ; toi, tu frôles.', hint: 'Descends jusqu\'à frôler l\'eau.' },
+  // Le Jardin de Darwin
+  { id: 'dawkins', realm: 'darwin', name: 'Les Biomorphes', text: 'Dix générations de sélection. En 1986, Richard Dawkins faisait évoluer ainsi des formes sur un écran, pour montrer qu\'un œil qui choisit suffit à sculpter le vivant.', hint: 'Choisis, encore et encore.' },
+  { id: 'herbier', realm: 'darwin', name: "L'Herbier", text: 'Trois plantes pressées entre deux pages. Les botanistes du XVIIIᵉ siècle faisaient de même, avec moins de règles et plus de papier.', hint: 'Garde ce qui te plaît : maintiens le doigt dessus.' },
+  { id: 'symetrie', realm: 'darwin', name: 'Symétrie', text: 'Ta plante est son propre miroir : sa règle se lit pareille dans les deux sens, la gauche et la droite échangées.', hint: 'Une règle qui se lit dans les deux sens.' },
   // Les Racines
   { id: 'coeur', realm: 'racines', name: 'Le Cœur du Monde', text: 'z ← z² + c. Une ligne, et une frontière infinie. Le cœur de ce monde est une équation.', hint: 'Descends tout en bas.' },
   { id: 'graine', realm: 'racines', name: "La Graine d'Or", text: 'Tu as tout trouvé. Plante-la : un autre monde poussera à partir d\'elle, différent.', hint: 'Trouve tout le reste.' },

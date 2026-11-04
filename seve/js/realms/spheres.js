@@ -4,6 +4,7 @@ import { TAU, clamp, lerp, glow, drawGlow, rgba, hslToRgb, makeCanvas, makeNoise
 export const mood = {
   root: 130.81, scale: 'majPenta', wave: 'sine', chord: [0, 7, 12, 19], pad: 0.04, cutoff: 900, lfo: 0.03,
   noise: { type: 'highpass', freq: 5200, q: 0.2, gain: 0.004, gust: 0.4, gustRate: 0.05 },
+  motif: false, // ici, ce sont les orbites qui chantent
 };
 
 const EPS2 = 30; // adoucissement de la gravité aux très courtes distances

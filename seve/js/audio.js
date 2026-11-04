@@ -292,6 +292,25 @@ export const audio = {
     this._send(out, 0, 0.45, 0);
     out.gain.setTargetAtTime(mood.pad ?? 0.05, t + 0.2, 1.2);
     this._drone = { out, nodes };
+    this._scheduleMotif();
+  },
+
+  // Le lieu fredonne : de loin en loin, une note de sa gamme, qui marche au hasard (parfois deux)
+  _scheduleMotif() {
+    clearTimeout(this._motifTimer);
+    const m = this.mood?.motif === false ? null : { every: [5, 11], type: 'glass', vel: 0.03, oct: 1, ...(this.mood?.motif || {}) };
+    if (!m) return;
+    const delay = m.every[0] + Math.random() * (m.every[1] - m.every[0]);
+    this._motifTimer = setTimeout(() => {
+      if (this.ready && !this.muted && !document.hidden) {
+        const step = [-2, -1, -1, 1, 1, 2, 3][(Math.random() * 7) | 0];
+        this._motifDeg = Math.max(0, Math.min(11, (this._motifDeg ?? 4) + step));
+        const pan = (Math.random() - 0.5) * 0.8;
+        this.note(this._motifDeg, { type: m.type, vel: m.vel, dur: 3.2, send: 0.75, delay: 0.25, oct: m.oct, pan });
+        if (Math.random() < 0.35) this.note(this._motifDeg + 2, { type: m.type, vel: m.vel * 0.7, dur: 3, send: 0.75, delay: 0.25, oct: m.oct, pan, at: 0.32 });
+      }
+      this._scheduleMotif();
+    }, delay * 1000);
   },
 
   // Intensité du bruit de fond (pluie, vent…)
