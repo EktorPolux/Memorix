@@ -234,11 +234,16 @@ export function create(api, meta, opts = {}) {
     const topLimit = portrait ? 132 : 104;
     if (Cy - ry < topLimit) ry = Cy - topLimit;
     const used = new Set();
-    const stagger = fruits.length > 9; // beaucoup de mondes : un fruit sur deux pend un peu plus loin
+    // beaucoup de mondes : les fruits voisins pendent à des distances différentes, sur deux ou trois cercles
+    const rings = fruits.length > 13 ? [1, 1.13, 1.26] : fruits.length > 9 ? [1, 1.17] : [1];
+    // l'anneau extérieur reste dans l'écran, et les fruits du sommet restent étagés au lieu de s'aplatir contre le haut
+    const rxE = Math.min(rx, (W / 2 - 26) / rings[rings.length - 1]);
+    const ryE = Math.min(ry, (Cy - topLimit) / rings[rings.length - 1]);
     for (const f of fruits) {
-      const ring = stagger && f.idx % 2 ? 1.17 : 1;
-      f.rx = clamp(Cx + Math.sin(f.u) * rx * ring, 22, W - 22);
-      f.ry = Math.max(topLimit, Cy - Math.cos(f.u) * ry * ring);
+      const ring = rings[f.idx % rings.length];
+      f.ring = ring;
+      f.rx = clamp(Cx + Math.sin(f.u) * rxE * ring, 22, W - 22);
+      f.ry = Math.max(topLimit, Cy - Math.cos(f.u) * ryE * ring);
       let best = null, bd = 1e9;
       for (const n of anchorsPool) {
         if (used.has(n)) continue;
@@ -691,7 +696,8 @@ export function create(api, meta, opts = {}) {
     const r = fruitR();
     for (const f of fruits) {
       const ready = f.realm.ready;
-      const above = Math.abs(f.u) < 0.75; // les fruits du sommet portent leur nom au-dessus
+      // les fruits du sommet portent leur nom au-dessus ; sur un petit écran, ceux de l'anneau intérieur le portent dessous, pour ne pas se marcher dessus
+      const above = Math.abs(f.u) < 0.75 && !(small && f.ring === 1);
       ctx.font = '400 9.5px "DM Mono", ui-monospace, monospace';
       if ('letterSpacing' in ctx) ctx.letterSpacing = small ? '1.5px' : '3px';
       const name = f.realm.short.toUpperCase();

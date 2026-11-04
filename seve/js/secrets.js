@@ -60,6 +60,18 @@ export const SECRETS = [
   { id: 'dawkins', realm: 'darwin', name: 'Les Biomorphes', text: 'Dix générations de sélection. En 1986, Richard Dawkins faisait évoluer ainsi des formes sur un écran, pour montrer qu\'un œil qui choisit suffit à sculpter le vivant.', hint: 'Choisis, encore et encore.' },
   { id: 'herbier', realm: 'darwin', name: "L'Herbier", text: 'Trois plantes pressées entre deux pages. Les botanistes du XVIIIᵉ siècle faisaient de même, avec moins de règles et plus de papier.', hint: 'Garde ce qui te plaît : maintiens le doigt dessus.' },
   { id: 'symetrie', realm: 'darwin', name: 'Symétrie', text: 'Ta plante est son propre miroir : sa règle se lit pareille dans les deux sens, la gauche et la droite échangées.', hint: 'Une règle qui se lit dans les deux sens.' },
+  // La Cité de Conway
+  { id: 'gosper', realm: 'vie', name: 'Le Canon de Gosper', text: "En 1970, Bill Gosper remporte les cinquante dollars promis par Conway : une forme qui grandit sans fin, en tirant un planeur toutes les trente générations.", hint: 'Pose la machine qui tire des planeurs. (Ou écris le nom de celui qui a inventé ce jeu.)' },
+  { id: 'mathusalem', realm: 'vie', name: 'Mathusalem', text: 'Cinq cellules, et mille cent trois générations de tumulte avant le calme. Le R-pentomino est le plus célèbre des mathusalems.', hint: 'Pose le R-pentomino, puis laisse-le vivre très longtemps.' },
+  { id: 'highlife', realm: 'vie', name: 'HighLife', text: 'Naître aussi avec six voisins : une seule règle de plus, et il existe un réplicateur, une forme qui fabrique des copies d\'elle-même.', hint: 'La règle s\'affiche en haut. Touche-la.' },
+  // Les Lignes de Force
+  { id: 'faraday', realm: 'champs', name: "L'Induction", text: "Un aimant qui bouge près d'une bobine y fait naître un courant. Michael Faraday l'a montré en 1831, et presque toute notre électricité naît encore ainsi.", hint: "Agite un aimant près de la bobine, jusqu'à allumer l'ampoule." },
+  { id: 'monopole', realm: 'champs', name: 'Le Monopôle introuvable', text: 'Coupe un aimant en deux : tu obtiens deux aimants, chacun avec son nord et son sud. Un pôle seul, un monopôle, personne n\'en a jamais trouvé.', hint: 'Touche deux fois un aimant, vite.' },
+  { id: 'repulsion', realm: 'champs', name: 'Les Semblables', text: 'Nord contre nord : ils se fuient. Les lignes de force se tordent pour ne jamais se croiser.', hint: 'Approche deux pôles de même nom.' },
+  // Le Musée des Cadres Impossibles
+  { id: 'vernissage', realm: 'galerie', name: 'Le Vernissage', text: "Neuf salles, neuf cadres qui n'en sont pas. Tu as tout vu ; le musée peut éteindre ses projecteurs, il continuera de peindre dans le noir.", hint: 'Visite toutes les salles.' },
+  { id: 'magritte', realm: 'galerie', name: "Ceci n'est pas un cadre", text: "En 1929, René Magritte peignait une pipe et écrivait dessous : « Ceci n'est pas une pipe. » Il avait raison, c'est une image. Ici non plus, rien n'est un cadre.", hint: 'Contemple une œuvre longtemps, du bout du doigt.' },
+  { id: 'duchamp', realm: 'galerie', name: 'Roue de bicyclette', text: "En 1913, Marcel Duchamp fixe une roue de vélo sur un tabouret, pour le plaisir de la regarder tourner, comme on regarde un feu. On appellera cela un ready-made.", hint: 'Une roue est faite pour tourner. Très vite.' },
   // Les Racines
   { id: 'coeur', realm: 'racines', name: 'Le Cœur du Monde', text: 'z ← z² + c. Une ligne, et une frontière infinie. Le cœur de ce monde est une équation.', hint: 'Descends tout en bas.' },
   { id: 'graine', realm: 'racines', name: "La Graine d'Or", text: 'Tu as tout trouvé. Plante-la : un autre monde poussera à partir d\'elle, différent.', hint: 'Trouve tout le reste.' },
