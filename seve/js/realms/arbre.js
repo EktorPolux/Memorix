@@ -196,6 +196,7 @@ export function create(api, meta, opts = {}) {
   let vignette = null, moonImg = null, hovered = null;
   let state = opts.intro && !hasGerminated ? 'seed' : 'live';
   let growT = state === 'seed' ? -1 : 999;
+  if (opts.regrow) { state = 'grow'; growT = 0; } // après la Graine d'Or : un autre arbre pousse sous tes yeux
   let seedT = 0, lastLvl = -1, nextPulse = -1;
 
   function makeMoon(r) {
@@ -439,6 +440,7 @@ export function create(api, meta, opts = {}) {
     ctx.fillRect(0, groundY + H * 0.03, W, H);
     drawGrass(ctx, t, night);
     drawSprouts(ctx, t, night);
+    if (state === 'live' && api.rootsOpen()) drawDoor(ctx, t);
     if (state === 'seed' || (state === 'grow' && growT < 1.6)) drawSeed(ctx);
 
     ctx.globalCompositeOperation = 'lighter';
@@ -466,6 +468,31 @@ export function create(api, meta, opts = {}) {
     ctx.lineTo(W + 40, H);
     ctx.closePath();
     ctx.fill();
+  }
+
+  // Le passage vers les Racines : une fente de lumière entre les racines, quand assez de secrets l'ont ouverte
+  function drawDoor(ctx, t) {
+    const x = rootX, y = groundY + 16, k = 0.8 + 0.2 * Math.sin(t * 2.2);
+    ctx.globalCompositeOperation = 'lighter';
+    drawGlow(ctx, glow([180, 140, 255], 48), x, y, 70 * k, 0.45);
+    ctx.strokeStyle = `rgba(220,200,255,${0.5 * k})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let i = 0; i < 7; i++) {
+      const a = Math.PI / 2 + (i - 3) * 0.32;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(a) * 26 * k, y + Math.sin(a) * 14 * k);
+    }
+    ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.font = '400 9px "DM Mono", ui-monospace, monospace';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = `rgba(220,200,255,${0.55 * k})`;
+    ctx.fillText('↓ RACINES', x, y + 18);
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
   }
 
   function drawSeed(ctx) {
@@ -761,6 +788,12 @@ export function create(api, meta, opts = {}) {
         secrets.find('voeu');
         return;
       }
+    }
+    // la fente entre les racines
+    if (api.rootsOpen() && Math.hypot(p.x - rootX, p.y - (groundY + 18)) < 42) {
+      audio.note(-3, { type: 'soft', vel: 0.14, dur: 3, oct: -1 });
+      api.go('racines');
+      return;
     }
     // le tronc : un cœur qui bat
     for (const n of nodes) {

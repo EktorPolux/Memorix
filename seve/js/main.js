@@ -35,9 +35,9 @@ export const REALMS = [
   { id: 'alchimie', file: './realms/alchimie.js', ready: true, color: '#ff6b5a', short: 'Alchimie',
     kicker: 'Tableau IX · Matière', title: "L'Atelier d'Alchimie", sub: 'Sable, eau, feu, glace, graines : chaque rencontre change la matière.',
     hint: ['Choisis · un élément en bas', 'Dessine · pour le verser'] },
-  { id: 'racines', file: './realms/racines.js', ready: false, hidden: true, color: '#b48cff', short: 'Racines',
-    kicker: 'Tableau secret', title: 'Les Racines', sub: 'Sous l\'arbre, ce qui relie tout.',
-    hint: ['Descends'] },
+  { id: 'racines', file: './realms/racines.js', ready: true, hidden: true, color: '#b48cff', short: 'Racines',
+    kicker: 'Tableau secret', title: 'Les Racines', sub: 'Sous l\'arbre, ce qui relie tout. Et tout au fond, un cœur qui bat.',
+    hint: ['Promène ta lanterne', 'Touche une racine · pour y envoyer la sève', 'Touche le cœur · pour y plonger'] },
 ];
 
 const $ = id => document.getElementById(id);
@@ -45,7 +45,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const engine = createEngine($('world'));
 secrets.setRealms(REALMS);
 
-let current = null, busy = false, pending = null, started = false;
+let current = null, busy = false, pending = null, started = false, pendingRegrow = false;
+const ROOTS_AT = 8; // secrets qu'il faut pour que le passage sous l'arbre s'ouvre
+const rootsOpen = () => secrets.count() >= ROOTS_AT || secrets.wasVisited('racines');
 
 const api = {
   engine,
@@ -69,16 +71,21 @@ const api = {
     else titleCard(REALMS[0], { hold: 5200 });
   },
   startAudio() { audio.init(); if (current) audio.setMood(current.mood, true); },
+  rootsOpen,
+  // après la Graine d'Or : l'Arbre-Monde repousse, différent
+  regrow() { pendingRegrow = true; if (location.hash) location.hash = ''; else go('arbre', { force: true }); },
 };
 
 function realmFromHash() {
   const id = decodeURIComponent(location.hash.slice(1));
   const r = REALMS.find(x => x.id === id && x.ready);
+  if (r && r.id === 'racines' && !rootsOpen()) return 'arbre';
   return r ? r.id : 'arbre';
 }
 
 async function go(id, opts = {}) {
   if (busy) { pending = id; return; }
+  if (id === 'arbre' && pendingRegrow) { pendingRegrow = false; opts = { ...opts, regrow: true, force: true }; }
   if (current && current.id === id && !opts.force) return;
   const meta = REALMS.find(r => r.id === id && r.ready);
   if (!meta) return;
@@ -136,7 +143,8 @@ document.body.classList.toggle('muted', audio.muted);
 $('btn-help').addEventListener('click', () => api.showTitle());
 const carnet = $('carnet');
 function openCarnet() {
-  renderCarnet({ realms: REALMS.filter(r => !r.hidden || r.ready), secrets, onGo: id => { closeCarnet(); api.go(id); } });
+  const shown = REALMS.filter(r => !r.hidden || r.ready).map(r => ({ ...r, locked: r.id === 'racines' && !rootsOpen() }));
+  renderCarnet({ realms: shown, secrets, lockedText: `scellé · ${ROOTS_AT} secrets l'ouvrent`, onGo: id => { closeCarnet(); api.go(id); } });
   carnet.hidden = false;
   $('carnet-close').focus();
 }

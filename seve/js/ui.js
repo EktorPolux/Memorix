@@ -47,7 +47,7 @@ export function hideTitleCard() { clearTimeout(tcTimer); $('title-card').classLi
 export function setRealmLabel(text) { const el = $('realm-label'); if (el) el.textContent = text; }
 
 // Carnet de voyage : lieux visités, secrets trouvés, et indices pour les autres
-export function renderCarnet({ realms, secrets, onGo }) {
+export function renderCarnet({ realms, secrets, onGo, lockedText = 'scellé' }) {
   const list = $('carnet-list');
   list.textContent = '';
   const ready = realms.filter(r => r.ready);
@@ -67,7 +67,12 @@ export function renderCarnet({ realms, secrets, onGo }) {
     h.append(dot, g.title);
     head.append(h);
     if (g.id !== 'monde') {
-      if (g.ready) {
+      if (g.locked) {
+        const s = document.createElement('span');
+        s.className = 'soon';
+        s.textContent = lockedText;
+        head.append(s);
+      } else if (g.ready) {
         const go = document.createElement('button');
         go.className = 'go';
         go.type = 'button';
