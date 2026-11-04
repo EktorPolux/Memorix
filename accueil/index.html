@@ -52,8 +52,10 @@ h1{
 .cards{display:grid;grid-template-columns:1fr;gap:20px;}
 @media(min-width:760px){
   .cards{grid-template-columns:1fr 1fr;gap:28px;}
-  .card:last-child:nth-child(odd){grid-column:1/-1;min-height:0;}
+  .featured{grid-column:1/-1;min-height:0;}
 }
+.card.featured h2{font-size:clamp(52px,7vw,84px);}
+.card.featured p{max-width:640px;}
 
 .card{
   --c:#fff;
@@ -91,6 +93,7 @@ h1{
 .go span{display:inline-block;transition:transform .35s;}
 .card:hover .go span,.card:focus-visible .go span{transform:translateX(6px);}
 
+.seve{--c:#ffd48a;}
 .memorix{--c:#818cf8;}
 .formes{--c:#f0b800;}
 .reve{--c:#4fc3f7;}
@@ -123,6 +126,17 @@ footer{
   </header>
 
   <nav class="cards" aria-label="Expériences">
+    <a class="card seve featured" href="../seve/">
+      <p class="num">00 · Monde · Tableaux vivants</p>
+      <h2>Sève</h2>
+      <p>
+        Un monde qui pousse en équations. Un arbre-carrefour dont chaque fruit ouvre un tableau vivant :
+        des lianes qui cherchent ta lumière, des êtres qui naissent sous le microscope,
+        des planètes qui chantent leur orbite. Et des secrets partout.
+      </p>
+      <p class="go"><span>Germer →</span></p>
+    </a>
+
     <a class="card memorix" href="../">
       <p class="num">01 · Jeu · PWA</p>
       <h2>Mémorix</h2>
