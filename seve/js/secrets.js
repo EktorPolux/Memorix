@@ -31,7 +31,7 @@ export const SECRETS = [
   { id: 'quarantedeux', realm: 'recif', name: 'La Réponse', text: '42 → 21 → 64 → 32 → 16 → 8 → 4 → 2 → 1. Huit étapes. La question, elle, reste à trouver.', hint: 'La réponse est quelque part dans le récif.' },
   { id: 'meduse', realm: 'recif', name: 'Bourgeonnement', text: 'Certaines méduses ne meurent pas : elles recommencent. Celle-ci vient de se diviser.', hint: "Les méduses n'aiment pas qu'on les touche trois fois." },
   // La Chambre des Flocons
-  { id: 'lettre', realm: 'flocons', name: 'Lettre du Ciel', text: '« Les flocons de neige sont des lettres envoyées du ciel. » — Ukichiro Nakaya. Celle-ci est une plaque parfaite.', hint: 'Une vapeur rare, une croissance lente : une plaque, sans branche.' },
+  { id: 'lettre', realm: 'flocons', name: 'Lettre du Ciel', text: '« Les flocons de neige sont des lettres envoyées du ciel. » — Ukichiro Nakaya. Celle-ci est une plaque parfaite.', hint: 'Un air très humide, une vapeur rare, dès la naissance du flocon : une plaque, sans branche.' },
   { id: 'collection', realm: 'flocons', name: "Aucun n'est Pareil", text: 'Douze flocons, douze histoires. Chacun garde la trace exacte des nuages qu\'il a traversés.', hint: 'Regarde-en tomber douze.' },
   // L'Étang au Crépuscule
   { id: 'carpe', realm: 'etang', name: "La Carpe d'Or", text: 'La légende dit qu\'une carpe qui remonte la cascade devient dragon. Celle-ci s\'est contentée de venir te voir.', hint: 'Nourris-les, souvent.' },
