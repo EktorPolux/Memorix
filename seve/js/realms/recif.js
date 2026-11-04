@@ -623,7 +623,7 @@ export function create(api) {
       j.taps.push(t);
       // un toucher la fait filer droit devant
       j.vx += Math.sin(j.a) * 50; j.vy -= Math.cos(j.a) * 50;
-      if (j.sp === 'atolla') { j.alarm = 1; audio.sweep({ from: 1400, to: 600, dur: 0.9, vel: 0.04, type: 'sine', send: 0.6 }); }
+      if (j.sp === 'atolla') { j.alarm = 1; audio.sweep({ from: 1400, to: 600, dur: 0.9, vel: 0.04, type: 'sine', send: 0.6 }); secrets.find('alarme'); }
       audio.note(9 + j.taps.length, { type: 'glass', vel: 0.1, dur: 1.6 });
       if (j.taps.length >= 3 && jellies.length < 12) {
         j.taps = [];

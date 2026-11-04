@@ -1150,6 +1150,7 @@ export function create(api) {
     const ageOf = n => (n <= 2 ? 0 : n <= 4 ? 1 : n <= 8 ? 2 : 3);
     const KW = 420, KH = 580;
     let num = 1, kc = null, door = null, doorKey = '', lean = 0, flash = 0, keyTurn = 0;
+    const seenNums = new Set([1]);
     const look = { x: 0, y: 0 };
     function paintNumber(n) {
       kc = kc || makeCanvas(KW, KH);
@@ -1317,6 +1318,8 @@ export function create(api) {
         if (!this.hit(x, y, L)) return false;
         num = (num % 10) + 1;
         paintNumber(num);
+        seenNums.add(num);
+        if (seenNums.size >= 10) secrets.find('dixgrands');
         flash = 1; keyTurn = 1;
         audio.noise({ freq: 3200, q: 2, dur: 0.05, vel: 0.1, type: 'bandpass' });
         audio.noise({ freq: 1800, q: 2, dur: 0.05, vel: 0.08, type: 'bandpass', at: 0.12 });

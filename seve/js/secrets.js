@@ -12,6 +12,8 @@ export const SECRETS = [
   // L'Arbre-Monde
   { id: 'seve', realm: 'arbre', name: 'La Sève', text: "Cinq battements, et la sève monte jusqu'au bout des fruits. Tout ce monde est relié par le même courant.", hint: 'Le tronc a un cœur. Fais-le battre.' },
   { id: 'voeu', realm: 'arbre', name: 'Le Vœu', text: "Tu as attrapé une étoile filante. Elle ne réalise rien, mais elle t'a vu.", hint: 'La nuit, quelque chose traverse le ciel. Attrape-le.' },
+  { id: 'esprits', realm: 'arbre', name: "Les Esprits de l'Écorce", text: "Au Japon, on raconte que des esprits, les kodama, habitent les très vieux arbres ; abattre un arbre habité portait malheur. Ceux-ci sont venus pour les fleurs de ton jardin.", hint: 'Ils viennent la nuit, quand le jardin a fleuri et que tout se tait. Salue-en trois.' },
+  { id: 'mycorhize', realm: 'arbre', name: 'Le Réseau', text: "Sous la forêt, des champignons relient les racines des arbres : ils échangent de l'eau, du sucre, des signaux. Les chercheurs l'ont surnommé le « wood wide web ».", hint: 'Frappe trois fois aux racines.' },
   { id: 'jardinier', realm: 'arbre', name: 'Le Jardinier', text: 'Sept pousses au pied de l\'arbre. Le monde était là ; tu viens de lui ajouter un jardin.', hint: 'Le sol attend tes doigts.' },
   // La Serre aux Lianes
   { id: 'tournesol', realm: 'serre', name: "La Spirale d'Or", text: "137,5° : l'angle d'or. Chaque graine se place là où il reste le plus de place. Le tournesol ne calcule pas : il est le calcul.", hint: 'Garde la lumière immobile, longtemps.' },
@@ -31,6 +33,7 @@ export const SECRETS = [
   // Le Récif de Collatz
   { id: 'vingtsept', realm: 'recif', name: 'Le Grand Voyage de 27', text: '27 monte jusqu\'à 9 232 avant de redescendre à 1 : 111 étapes. Personne n\'a prouvé que tous les nombres finissent par rentrer.', hint: 'Le plus petit des grands voyageurs.' },
   { id: 'quarantedeux', realm: 'recif', name: 'La Réponse', text: '42 → 21 → 64 → 32 → 16 → 8 → 4 → 2 → 1. Huit étapes. La question, elle, reste à trouver.', hint: 'La réponse est quelque part dans le récif.' },
+  { id: 'alarme', realm: 'recif', name: "L'Alarme de l'Atolla", text: "Attaquée, la méduse Atolla s'illumine en roue bleue. Ce n'est pas pour effrayer : la lumière appelle un plus gros prédateur, qui mangera son agresseur. Une alarme antivol des abysses.", hint: 'La méduse rouge des profondeurs n\'aime pas qu\'on la touche.' },
   { id: 'meduse', realm: 'recif', name: 'Bourgeonnement', text: 'Certaines méduses ne meurent pas : elles recommencent. Celle-ci vient de se diviser.', hint: "Les méduses n'aiment pas qu'on les touche trois fois." },
   // La Chambre des Flocons
   { id: 'lettre', realm: 'flocons', name: 'Lettre du Ciel', text: '« Les flocons de neige sont des lettres envoyées du ciel. » — Ukichiro Nakaya. Celle-ci est une plaque parfaite.', hint: 'Un air très humide, une vapeur rare, dès la naissance du flocon : une plaque, sans branche.' },
@@ -58,6 +61,10 @@ export const SECRETS = [
   // L'Envol
   { id: 'phare', realm: 'envol', name: 'Vu du Ciel', text: 'Tu as retrouvé l\'Arbre-Monde depuis les airs. De haut, ce n\'est qu\'une lueur ; c\'est pourtant de lui que tout part.', hint: 'Une lumière se lève quelque part au-dessus des terres.' },
   { id: 'tore', realm: 'envol', name: 'Le Tour du Monde', text: 'Revenu à ton point de départ sans faire demi-tour. Ce monde-ci n\'est pas une sphère mais un tore : un beignet sans bord.', hint: 'Va tout droit. Très longtemps.' },
+  { id: 'paradoxal', realm: 'envol', name: 'Le Sommeil Paradoxal', text: "Les rêves les plus vifs naissent pendant le sommeil paradoxal, découvert en 1953 : le corps dort, les yeux bougent, le cerveau s'éveille presque. Il revient environ toutes les quatre-vingt-dix minutes.", hint: 'Rêve longtemps.' },
+  { id: 'lucide', realm: 'envol', name: 'Le Rêve Lucide', text: "Savoir qu'on rêve, sans se réveiller. En 1975, Keith Hearne l'a prouvé en laboratoire : un dormeur lucide envoyait, avec ses yeux, des signaux convenus d'avance.", hint: 'Monte si haut que le ciel te renvoie le monde.' },
+  { id: 'baleine', realm: 'envol', name: 'Le Chant des Baleines', text: "Le chant des baleines à bosse change d'année en année, et toutes les baleines d'un même océan apprennent la nouvelle chanson. Celles-ci ont simplement changé d'océan.", hint: 'Approche-toi de ce qui nage dans le ciel.' },
+  { id: 'lanternes', realm: 'envol', name: 'Les Lanternes', text: "À Chiang Mai, pour la fête de Yi Peng, des milliers de lanternes de papier montent ensemble dans la nuit ; on dit que chacune emporte un souci.", hint: 'Lâche dix lanternes.' },
   { id: 'rasemottes', realm: 'envol', name: 'Rase-mottes', text: 'Si bas que l\'eau t\'aurait mouillé les ailes. Les martinets dorment parfois en vol ; toi, tu frôles.', hint: 'Descends jusqu\'à frôler l\'eau.' },
   // Le Jardin de Darwin
   { id: 'dawkins', realm: 'darwin', name: 'Les Biomorphes', text: 'Dix générations de sélection. En 1986, Richard Dawkins faisait évoluer ainsi des formes sur un écran, pour montrer qu\'un œil qui choisit suffit à sculpter le vivant.', hint: 'Choisis, encore et encore.' },
@@ -74,6 +81,7 @@ export const SECRETS = [
   // Le Musée des Cadres Impossibles
   { id: 'vernissage', realm: 'galerie', name: 'Le Vernissage', text: "Neuf salles, neuf cadres qui n'en sont pas. Tu as tout vu ; le musée peut éteindre ses projecteurs, il continuera de peindre dans le noir.", hint: 'Visite toutes les salles.' },
   { id: 'magritte', realm: 'galerie', name: "Ceci n'est pas un cadre", text: "En 1929, René Magritte peignait une pipe et écrivait dessous : « Ceci n'est pas une pipe. » Il avait raison, c'est une image. Ici non plus, rien n'est un cadre.", hint: 'Contemple une œuvre longtemps, du bout du doigt.' },
+  { id: 'dixgrands', realm: 'galerie', name: 'Les Dix Plus Grands', text: "Hilma af Klint a peint ces dix toiles géantes en quelques mois, en 1907. Ses premières peintures abstraites précèdent celles de Kandinsky, mais le monde ne les a découvertes qu'en 1986.", hint: 'Regarde les dix, par le trou de la serrure.' },
   { id: 'duchamp', realm: 'galerie', name: 'Roue de bicyclette', text: "En 1913, Marcel Duchamp fixe une roue de vélo sur un tabouret, pour le plaisir de la regarder tourner, comme on regarde un feu. On appellera cela un ready-made.", hint: 'Une roue est faite pour tourner. Très vite.' },
   // Les Racines
   { id: 'coeur', realm: 'racines', name: 'Le Cœur du Monde', text: 'z ← z² + c. Une ligne, et une frontière infinie. Le cœur de ce monde est une équation.', hint: 'Descends tout en bas.' },

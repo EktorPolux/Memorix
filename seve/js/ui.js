@@ -13,7 +13,7 @@ export function toast({ kicker = 'Secret trouvé', title = '', text = '', ms = 7
   if (text) { const d = document.createElement('p'); d.className = 'd'; d.textContent = text; el.append(d); }
   box.prepend(el);
   while (box.children.length > 3) box.lastChild.remove();
-  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 900); }, ms);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 900); }, ms + 5000); // le temps de lire, et de rêver un peu
 }
 
 export function setBadge(n, pop = false) {

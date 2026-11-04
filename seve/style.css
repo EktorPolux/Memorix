@@ -84,7 +84,7 @@ body.pre #back,body.pre #tools,body.pre #realm-label{opacity:0;pointer-events:no
 #realm-label{
   position:absolute;left:calc(18px + var(--sal));bottom:calc(16px + var(--sab));
   font-size:9.5px;letter-spacing:3px;text-transform:uppercase;color:var(--faint);
-  transition:opacity .6s;max-width:70vw;
+  transition:opacity .6s;max-width:70vw;text-shadow:0 1px 6px rgba(0,0,0,.55),0 0 2px rgba(0,0,0,.4);
 }
 
 /* Notifications (secrets trouvés) */
