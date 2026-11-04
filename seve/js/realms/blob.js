@@ -10,6 +10,7 @@ const SA = 0.39, RA = 0.52, SO = 9, SS = 1, DEP = 1.8, FOOD = 2.4, DIFF = 0.35, 
 const STOPS = [[0, '#0a0805'], [0.25, '#3a2606'], [0.5, '#a8700f'], [0.78, '#f0bf3a'], [1, '#fff4b8']].map(([p, c]) => [p, hexToRgb(c)]);
 // Villes autour de Tokyo (latitude, longitude) — à la manière de Tero et al., Science, 2010
 const CITIES = [[35.68, 139.76, 2], [35.44, 139.64], [35.53, 139.7], [35.61, 140.12], [35.69, 139.98], [35.79, 139.9], [35.87, 139.97], [35.86, 140.03], [35.78, 140.32], [35.72, 140.22], [36.08, 140.11], [36.08, 140.2], [36.37, 140.47], [36.56, 139.88], [36.31, 139.8], [36.18, 139.71], [35.98, 139.75], [35.89, 139.79], [35.91, 139.62], [35.98, 139.59], [36.15, 139.39], [35.92, 139.49], [35.8, 139.47], [35.79, 139.26], [35.66, 139.32], [35.7, 139.41], [35.55, 139.45], [35.57, 139.37], [35.44, 139.36], [35.33, 139.35], [35.34, 139.49], [35.32, 139.55], [35.28, 139.67], [35.26, 139.15], [35.38, 139.92], [35.5, 140.12], [36.32, 139.0], [36.39, 139.06]];
+const NAMES = [['TOKYO', 35.68, 139.76], ['YOKOHAMA', 35.44, 139.64], ['CHIBA', 35.61, 140.12], ['NARITA', 35.78, 140.32], ['TSUKUBA', 36.08, 140.11], ['HACHIŌJI', 35.66, 139.32], ['UTSUNOMIYA', 36.56, 139.88], ['MITO', 36.37, 140.47]];
 const BAY = [[35.62, 139.78], [35.53, 139.78], [35.45, 139.68], [35.33, 139.69], [35.25, 139.74], [35.2, 139.8], [35.3, 139.83], [35.37, 139.88], [35.48, 140.02], [35.58, 140.07], [35.66, 140.0], [35.64, 139.9]];
 
 export function create(api) {
@@ -22,6 +23,8 @@ export function create(api) {
   let NA = 0, X, Y, A;
   const foods = [];
   let mode = 'libre', modeT = 0, labelTaps = [], stroke = null, light = null;
+  // le sel : des grains qui scintillent le long du trait, et fondent avec lui
+  let grains = [], bayPoly = null;
   const lut = new Uint32Array(256);
   for (let i = 0; i < 256; i++) {
     const t = i / 255;
@@ -36,6 +39,8 @@ export function create(api) {
 
   function resize(w, h) {
     W = w; H = h;
+    grains = []; bayPoly = null;
+    if (mode !== 'libre') { mode = 'libre'; api.label(''); }
     dx0 = Math.round(W * 0.05); dy0 = Math.round(Math.max(76, H * 0.11));
     dw = Math.round(W * 0.9); dh = Math.round(H - dy0 - Math.max(44, H * 0.07));
     cs = clamp(Math.round(Math.sqrt((dw * dh) / (90000 * q))), 2, 5);
@@ -133,6 +138,8 @@ export function create(api) {
     foods.length = 0;
     for (const [lat, lon, big] of CITIES) { const [gx, gy] = geoToGrid(lat, lon); foods.push({ gx, gy, r: big ? 5 : 2.2, rot: Math.random() * TAU }); }
     const poly = BAY.map(([la, lo]) => geoToGrid(la, lo));
+    bayPoly = poly;
+    grains = [];
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) if (inPoly(x, y, poly)) maze[y * cols + x] = 1;
     const [tx, ty] = geoToGrid(35.68, 139.76);
     for (let i = 0; i < NA; i++) { const a = Math.random() * TAU, r = Math.random() * 6; X[i] = tx + Math.cos(a) * r; Y[i] = ty + Math.sin(a) * r; A[i] = Math.random() * TAU; }
@@ -148,10 +155,23 @@ export function create(api) {
     return c;
   }
 
+  // ——— Retour à la boîte libre
+  function startFree() {
+    mode = 'libre'; modeT = 0;
+    maze.fill(0); salt.fill(0); T.fill(0);
+    grains = [];
+    foods.length = 0;
+    scatter();
+    seedFoods();
+    api.label('');
+    audio.note(4, { type: 'bell', vel: 0.12, dur: 2.5 });
+  }
+
   // ——— Le labyrinthe de Nakagaki (2000)
   function startMaze() {
     mode = 'labyrinthe'; modeT = 0;
     maze.fill(0); salt.fill(0); T.fill(0);
+    grains = [];
     foods.length = 0;
     const mc = Math.max(7, Math.round(Math.min(cols, rows) / 9));
     const mw = Math.floor((cols - 2) / mc), mh = Math.floor((rows - 2) / mc);
@@ -195,7 +215,11 @@ export function create(api) {
     modeT += dt;
     const n = q < 0.8 ? 1 : 2;
     for (let k = 0; k < n; k++) step();
-    if (engine.frame % 30 === 0) for (let i = 0; i < salt.length; i++) if (salt[i] > 0) salt[i] = Math.max(0, salt[i] - 0.5);
+    if (engine.frame % 6 === 0) for (let i = 0; i < salt.length; i++) if (salt[i] > 0) salt[i] = Math.max(0, salt[i] - 0.1);
+    for (let i = grains.length - 1; i >= 0; i--) {
+      const g = grains[i];
+      if (salt[(g.gy | 0) * cols + (g.gx | 0)] <= 0.05) grains.splice(i, 1);
+    }
     if (mode === 'tokyo' && modeT > 24) secrets.find('tokyo');
     if (mode === 'labyrinthe' && modeT > 30) secrets.find('labyrinthe');
     if (light && input.down) { light.x = input.x; light.y = input.y; }
@@ -208,9 +232,26 @@ export function create(api) {
     // échelle logarithmique : les filaments fins restent visibles sans que les tubes saturent
     const pulse = 0.9 + 0.1 * Math.sin(t * 1.8);
     const k = (255 * pulse) / Math.log(1 + 40);
+    const water = mode === 'tokyo';
     for (let i = 0; i < T.length; i++) {
       const v = T[i];
-      img32[i] = maze[i] ? 0xff2a2a30 : salt[i] > 0 ? 0xffcfd6dc : lut[v <= 0 ? 0 : Math.min(255, (Math.log(1 + v) * k) | 0)];
+      if (maze[i]) {
+        if (water) {
+          // la baie : une eau sombre où passent des reflets lents
+          const x = i % cols, y = (i / cols) | 0, sh = Math.sin(x * 0.35 + t * 1.1 + Math.sin(y * 0.22 + t * 0.4) * 2) * 0.5 + 0.5;
+          const r = 16 + sh * 10, g = 38 + sh * 18, b = 58 + sh * 26;
+          img32[i] = (255 << 24) | (b << 16) | (g << 8) | r;
+        } else img32[i] = 0xff2a2a30;
+        continue;
+      }
+      let c = lut[v <= 0 ? 0 : Math.min(255, (Math.log(1 + v) * k) | 0)];
+      const sa = salt[i];
+      if (sa > 0) {
+        const a = Math.min(0.5, (sa / 30) * 0.5);
+        const r = (c & 255) * (1 - a) + 214 * a, g = ((c >> 8) & 255) * (1 - a) + 228 * a, b = ((c >> 16) & 255) * (1 - a) + 242 * a;
+        c = (255 << 24) | (b << 16) | (g << 8) | r;
+      }
+      img32[i] = c;
     }
     octx.putImageData(img, 0, 0);
     ctx.imageSmoothingEnabled = true;
@@ -219,6 +260,36 @@ export function create(api) {
     ctx.clip();
     ctx.drawImage(off, dx0, dy0, cols * cs, rows * cs);
     ctx.drawImage(agar, dx0, dy0);
+    // les grains de sel : chacun scintille à son heure, et pâlit quand le sel fond
+    if (grains.length) {
+      ctx.globalCompositeOperation = 'lighter';
+      const gs = glow([225, 238, 255], 8, 0.35);
+      for (const g of grains) {
+        const left = Math.min(1, salt[(g.gy | 0) * cols + (g.gx | 0)] / 30);
+        const tw = 0.5 + 0.5 * Math.sin(t * g.sp + g.ph);
+        drawGlow(ctx, gs, dx0 + g.gx * cs, dy0 + g.gy * cs, g.s * (1 + tw * tw * tw * 1.4), Math.sqrt(left) * (0.35 + 0.65 * tw * tw * tw * tw));
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    }
+    if (mode === 'tokyo' && bayPoly) {
+      ctx.strokeStyle = 'rgba(160,205,235,0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      bayPoly.forEach(([gx, gy], j) => (j ? ctx.lineTo : ctx.moveTo).call(ctx, dx0 + gx * cs, dy0 + gy * cs));
+      ctx.closePath();
+      ctx.stroke();
+      ctx.font = '400 8.5px "DM Mono", ui-monospace, monospace';
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const [bx, by] = bayPoly.reduce((a, [x, y]) => [a[0] + x / bayPoly.length, a[1] + y / bayPoly.length], [0, 0]);
+      ctx.fillStyle = 'rgba(170,210,235,0.55)';
+      ctx.fillText('BAIE DE TOKYO', dx0 + bx * cs, dy0 + by * cs);
+      ctx.fillStyle = 'rgba(255,236,190,0.5)';
+      for (const [name, la, lo] of NAMES) { const [gx, gy] = geoToGrid(la, lo); ctx.fillText(name, dx0 + gx * cs, dy0 + gy * cs - Math.max(10, 3 * cs) - 6); }
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    }
     // flocons d'avoine
     for (const fd of foods) {
       const x = dx0 + fd.gx * cs, y = dy0 + fd.gy * cs, r = Math.max(5, fd.r * cs * 1.4);
@@ -252,10 +323,6 @@ export function create(api) {
     ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx + 9, my - 3); ctx.lineTo(mx + 18, my); ctx.lineTo(mx + 27, my - 3); ctx.lineTo(mx + 27, my + 16); ctx.lineTo(mx + 18, my + 19); ctx.lineTo(mx + 9, my + 16); ctx.lineTo(mx, my + 19); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = 'rgba(120,100,70,0.9)';
     ctx.beginPath(); ctx.moveTo(mx + 9, my - 3); ctx.lineTo(mx + 9, my + 16); ctx.moveTo(mx + 18, my); ctx.lineTo(mx + 18, my + 19); ctx.stroke();
-    if (stroke && stroke.salting) {
-      ctx.fillStyle = 'rgba(240,245,250,0.6)';
-      for (const [x, y] of stroke.pts.slice(-40)) ctx.fillRect(x - 1, y - 1, 2, 2);
-    }
   }
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
@@ -277,7 +344,7 @@ export function create(api) {
       return;
     }
     const mx = dx0 + cols * cs - 34, my = dy0 + rows * cs - 30;
-    if (p.x > mx - 12 && p.x < mx + 40 && p.y > my - 14 && p.y < my + 32) { startTokyo(); return; }
+    if (p.x > mx - 12 && p.x < mx + 40 && p.y > my - 14 && p.y < my + 32) { if (mode === 'tokyo') startFree(); else startTokyo(); return; }
     const [gx, gy] = toGrid(p.x, p.y);
     if (gx < 2 || gy < 2 || gx > cols - 2 || gy > rows - 2) return;
     const near = foods.findIndex(fd => Math.hypot(fd.gx - gx, fd.gy - gy) < 14 / cs + 3);
@@ -286,18 +353,32 @@ export function create(api) {
     audio.note(Math.floor((1 - gy / rows) * 7) + 2, { type: 'pluck', vel: 0.18, dur: 1.3, pan: (p.x / W) * 2 - 1 });
   }
   function down(p) { stroke = { pts: [[p.x, p.y]], salting: false }; }
+  // un trait de sel : le blob le contourne, le temps qu'il fonde. Pinceau rond, fort au cœur, doux au bord.
+  function saltAt(gx, gy) {
+    const r = 1.9;
+    for (let y = Math.max(1, Math.floor(gy - r)); y <= Math.min(rows - 2, Math.ceil(gy + r)); y++)
+      for (let x = Math.max(1, Math.floor(gx - r)); x <= Math.min(cols - 2, Math.ceil(gx + r)); x++) {
+        const d = Math.hypot(x + 0.5 - gx, y + 0.5 - gy) / r;
+        if (d < 1) { const i = y * cols + x; salt[i] = Math.max(salt[i], 30 * (1 - d * d * 0.7)); }
+      }
+    for (let k = 0; k < 2; k++) {
+      const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r * 0.9;
+      const g = { gx: clamp(gx + Math.cos(a) * d, 1, cols - 2), gy: clamp(gy + Math.sin(a) * d, 1, rows - 2), s: 0.8 + Math.random() * 1.8, ph: Math.random() * TAU, sp: 1.5 + Math.random() * 4 };
+      grains.push(g);
+    }
+    if (grains.length > 1400) grains.splice(0, grains.length - 1400);
+  }
   function move(p) {
     if (!stroke || p.hover || light) return;
     const last = stroke.pts[stroke.pts.length - 1];
-    if (Math.hypot(p.x - last[0], p.y - last[1]) < 3) return;
+    const d = Math.hypot(p.x - last[0], p.y - last[1]);
+    if (d < 3) return;
     stroke.pts.push([p.x, p.y]);
     if (stroke.pts.length > 3) {
-      // un trait de sel : le blob le contourne, le temps qu'il se dissolve
       stroke.salting = true;
-      const [gx, gy] = toGrid(p.x, p.y);
-      for (let y = Math.max(1, (gy - 1.5) | 0); y <= Math.min(rows - 2, (gy + 1.5) | 0); y++)
-        for (let x = Math.max(1, (gx - 1.5) | 0); x <= Math.min(cols - 2, (gx + 1.5) | 0); x++) salt[y * cols + x] = 30;
-      if (Math.random() < 0.3) audio.noise({ freq: 6000, q: 1, dur: 0.06, vel: 0.03, type: 'highpass' });
+      const n = Math.max(1, Math.ceil(d / (cs * 0.9)));
+      for (let j = 1; j <= n; j++) { const [gx, gy] = toGrid(lerp(last[0], p.x, j / n), lerp(last[1], p.y, j / n)); if (gx > 1 && gy > 1 && gx < cols - 1 && gy < rows - 1) saltAt(gx, gy); }
+      if (Math.random() < 0.25) audio.noise({ freq: 7000 + Math.random() * 3000, q: 2, dur: 0.05, vel: 0.022, type: 'bandpass', pan: (p.x / W) * 2 - 1 });
     }
   }
   function up() { stroke = null; light = null; }

@@ -17,6 +17,7 @@ export const SECRETS = [
   { id: 'tournesol', realm: 'serre', name: "La Spirale d'Or", text: "137,5° : l'angle d'or. Chaque graine se place là où il reste le plus de place. Le tournesol ne calcule pas : il est le calcul.", hint: 'Garde la lumière immobile, longtemps.' },
   { id: 'crosse', realm: 'serre', name: 'La Crosse de Fougère', text: "Une spirale qui se déroule en perdant sa courbure. Les ingénieurs l'appellent clothoïde ; la fougère l'appelle printemps.", hint: "Quelque chose se déroule, parfois. Touche-le avant qu'il ne s'ouvre." },
   { id: 'dormeur', realm: 'serre', name: 'Le Dormeur', text: "Tu as traversé l'hiver. Rien n'était mort : tout attendait.", hint: "Reste jusqu'au retour des feuilles." },
+  { id: 'lignee', realm: 'serre', name: 'La Lignée', text: "Quatre générations de lianes : chacune est née d'une graine tombée de la précédente, un peu différente d'elle. C'est ainsi que les espèces dérivent, lentement.", hint: 'Laisse les fruits tomber, et attends plusieurs printemps.' },
   // Le Bassin Primordial
   { id: 'arcenciel', realm: 'bassin', name: "L'Arc-en-ciel Primordial", text: 'Six chimies en ronde : chacune poursuit la suivante. La vie a peut-être commencé ainsi, par une poursuite.', hint: 'Verse toutes les couleurs, vite.' },
   { id: 'luca', realm: 'bassin', name: 'LUCA', text: 'Le dernier ancêtre commun universel. Tout ce qui vit descend d\'un seul. Regarde la diversité revenir.', hint: "L'échantillon porte un nom. Touche-le trois fois." },
@@ -34,6 +35,7 @@ export const SECRETS = [
   // La Chambre des Flocons
   { id: 'lettre', realm: 'flocons', name: 'Lettre du Ciel', text: '« Les flocons de neige sont des lettres envoyées du ciel. » — Ukichiro Nakaya. Celle-ci est une plaque parfaite.', hint: 'Un air très humide, une vapeur rare, dès la naissance du flocon : une plaque, sans branche.' },
   { id: 'collection', realm: 'flocons', name: "Aucun n'est Pareil", text: 'Douze flocons, douze histoires. Chacun garde la trace exacte des nuages qu\'il a traversés.', hint: 'Regarde-en tomber douze.' },
+  { id: 'bentley', realm: 'flocons', name: 'Le Velours de Bentley', text: "Wilson Bentley a photographié plus de cinq mille flocons sur du velours noir, de 1885 jusqu'à sa mort en 1931. Il n'en a jamais trouvé deux pareils.", hint: 'Remplis le velours.' },
   // L'Étang au Crépuscule
   { id: 'carpe', realm: 'etang', name: "La Carpe d'Or", text: 'La légende dit qu\'une carpe qui remonte la cascade devient dragon. Celle-ci s\'est contentée de venir te voir.', hint: 'Nourris-les, souvent.' },
   { id: 'young', realm: 'etang', name: 'Les Fentes de Young', text: 'Deux sources, des franges : en 1801, Thomas Young montre que la lumière est une onde. Ici, l\'eau le répète.', hint: 'Deux gouttes au même instant.' },
@@ -51,6 +53,7 @@ export const SECRETS = [
   // L'Atelier de Fourier
   { id: 'ptolemee', realm: 'fourier', name: 'Ptolémée', text: 'Un seul cercle, et c\'est déjà une orbite. Dans l\'Almageste (IIᵉ siècle), Ptolémée empile des cercles sur des cercles pour imiter le ciel : une série de Fourier avant l\'heure.', hint: 'Dessine la forme la plus simple qui soit.' },
   { id: 'gibbs', realm: 'fourier', name: 'Le Phénomène de Gibbs', text: 'Aux coins du carré, la somme de cercles déborde d\'environ 9 %, et ce dépassement ne disparaît jamais, même avec mille cercles.', hint: 'Retire des cercles à un carré.' },
+  { id: 'kepler', realm: 'fourier', name: 'Les Deux Cercles de Kepler', text: "En 1609, Kepler chasse les épicycles du ciel : les planètes vont sur des ellipses. Ironie : une ellipse, ce sont exactement deux cercles qui tournent en sens contraires.", hint: "Une orbite de planète, et pas plus de deux cercles." },
   { id: 'oscilloscope', realm: 'fourier', name: 'La Voix des Formes', text: 'Gauche = x, droite = y. Branche ces deux voix sur un oscilloscope en mode XY : il redessinera ta forme. C\'est ainsi qu\'on compose la musique d\'oscilloscope.', hint: 'Une forme peut s\'écouter.' },
   // L'Envol
   { id: 'phare', realm: 'envol', name: 'Vu du Ciel', text: 'Tu as retrouvé l\'Arbre-Monde depuis les airs. De haut, ce n\'est qu\'une lueur ; c\'est pourtant de lui que tout part.', hint: 'Une lumière se lève quelque part au-dessus des terres.' },

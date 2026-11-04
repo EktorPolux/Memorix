@@ -24,16 +24,53 @@ function polygon(verts, t) {
 }
 const STAR = Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 0.42 : 1; return [Math.cos(a) * r, Math.sin(a) * r]; });
 const SQUARE = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+// Le flocon de Koch, à la troisième génération : 192 sommets
+const KOCH = (() => {
+  let pts = [0, 1, 2].map(i => { const a = -Math.PI / 2 + (i * TAU) / 3; return [Math.cos(a), Math.sin(a)]; });
+  for (let d = 0; d < 3; d++) {
+    const out = [];
+    for (let i = 0; i < pts.length; i++) {
+      const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % pts.length];
+      const dx = (bx - ax) / 3, dy = (by - ay) / 3;
+      const p1 = [ax + dx, ay + dy], p3 = [ax + 2 * dx, ay + 2 * dy];
+      const p2 = [p1[0] + dx * 0.5 + dy * Math.sqrt(3) / 2, p1[1] + dy * 0.5 - dx * Math.sqrt(3) / 2];
+      out.push([ax, ay], p1, p2, p3);
+    }
+    pts = out;
+  }
+  return pts;
+})();
+const CAT = [[0, 0.85], [0.45, 0.78], [0.78, 0.5], [0.9, 0.1], [0.85, -0.3], [0.95, -0.95], [0.5, -0.6], [0, -0.68], [-0.5, -0.6], [-0.95, -0.95], [-0.85, -0.3], [-0.9, 0.1], [-0.78, 0.5], [-0.45, 0.78]];
+// le croissant : un grand arc de cercle à gauche, un arc plus plat qui revient par l'intérieur
+const MOON = (() => {
+  const pts = [], c = 0.42, R = Math.hypot(c, 1), a0 = Math.atan2(-1, -c), a1 = Math.atan2(1, -c);
+  for (let i = 0; i <= 60; i++) { const a = Math.PI / 2 + (i / 60) * Math.PI; pts.push([Math.cos(a), Math.sin(a)]); }
+  for (let i = 1; i < 60; i++) { const a = a0 - (i / 60) * (TAU - (a1 - a0)); pts.push([c + Math.cos(a) * R, Math.sin(a) * R]); }
+  return pts;
+})();
 
 const GALLERY = [
   { name: 'Le Cœur', eq: 'x = 16 sin³t · y = 13 cos t − 5 cos 2t − 2 cos 3t − cos 4t', f: t => [16 * Math.sin(t) ** 3, -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))] },
+  { name: "L'Ellipse", eq: 'Kepler, 1609 : deux cercles qui tournent en sens contraires suffisent à une orbite', f: t => [2 * Math.cos(t), Math.sin(t)], ellipse: true },
   { name: 'Le Carré', eq: 'quatre droites et quatre coins : le pire cauchemar des cercles', f: t => polygon(SQUARE, t), square: true },
+  { name: 'La Cardioïde', eq: "x = 2 cos t − cos 2t · c'est la grande bulle de l'ensemble de Mandelbrot", f: t => [2 * Math.cos(t) - Math.cos(2 * t), 2 * Math.sin(t) - Math.sin(2 * t)] },
   { name: 'Le Papillon', eq: 'Temple Fay : r = e^(sin θ) − 2 cos 4θ + sin⁵((2θ − π)/24)', f: t => { const th = t * 6, r = Math.exp(Math.sin(th)) - 2 * Math.cos(4 * th) + Math.sin((2 * th - Math.PI) / 24) ** 5; return [Math.sin(th) * r, -Math.cos(th) * r]; } },
+  { name: 'La Rose de Grandi', eq: 'r = cos 4θ · Guido Grandi les nommait rhodonées, en 1723 : huit pétales', f: t => { const r = Math.cos(4 * t); return [Math.cos(t) * r, Math.sin(t) * r]; } },
   { name: 'Le Trèfle', eq: 'x = sin t + 2 sin 2t · y = cos t − 2 cos 2t', f: t => [Math.sin(t) + 2 * Math.sin(2 * t), -(Math.cos(t) - 2 * Math.cos(2 * t))] },
+  { name: 'La Néphroïde', eq: "x = 3 cos t − cos 3t · la tache de lumière au fond d'une tasse de café", f: t => [3 * Math.cos(t) - Math.cos(3 * t), 3 * Math.sin(t) - Math.sin(3 * t)] },
   { name: "L'Étoile", eq: 'cinq branches, dix sommets : il faut beaucoup de cercles pour une pointe', f: t => polygon(STAR, t) },
+  { name: 'La Courbe de Lissajous', eq: 'x = sin 3t · y = sin 2t · Lissajous, 1857, avec deux diapasons et deux miroirs', f: t => [Math.sin(3 * t), Math.sin(2 * t)] },
   { name: 'La Superformule', eq: 'Gielis : r = (|cos(mθ/4)|^n₂ + |sin(mθ/4)|^n₃)^(−1/n₁)', f: t => { const m = 5, n1 = 2, n2 = 7, n3 = 7; const r = Math.pow(Math.abs(Math.cos((m * t) / 4)) ** n2 + Math.abs(Math.sin((m * t) / 4)) ** n3, -1 / n1); return [Math.cos(t) * r, Math.sin(t) * r]; } },
+  { name: 'La Deltoïde', eq: 'Steiner, 1856 : un cercle qui roule dans un cercle trois fois plus grand', f: t => [2 * Math.cos(t) + Math.cos(2 * t), 2 * Math.sin(t) - Math.sin(2 * t)] },
   { name: 'La Lemniscate', eq: "Bernoulli : (x² + y²)² = 2a²(x² − y²), l'infini", f: t => { const d = 1 + Math.sin(t) ** 2; return [Math.cos(t) / d, (Math.sin(t) * Math.cos(t)) / d]; } },
+  { name: 'Le Poisson', eq: 'x = cos t − sin²t / √2 · y = cos t sin t', f: t => [Math.cos(t) - Math.sin(t) ** 2 / Math.SQRT2, Math.cos(t) * Math.sin(t)] },
   { name: "L'Hypotrochoïde", eq: 'le spirographe : R = 5, r = 3, d = 5', f: t => { const th = t * 3; return [2 * Math.cos(th) + 5 * Math.cos((2 / 3) * th), 2 * Math.sin(th) - 5 * Math.sin((2 / 3) * th)]; } },
+  { name: "L'Astroïde", eq: "x = cos³t · y = sin³t · ce qu'enveloppe une échelle qui glisse le long d'un mur", f: t => [Math.cos(t) ** 3, Math.sin(t) ** 3] },
+  { name: 'Le Limaçon de Pascal', eq: 'r = 1 + 2 cos θ · Étienne Pascal, le père de Blaise : une boucle dans la boucle', f: t => { const r = 1 + 2 * Math.cos(t); return [Math.cos(t) * r, Math.sin(t) * r]; } },
+  { name: 'Le Flocon de Koch', eq: 'von Koch, 1904 : un périmètre infini autour d\'une aire finie', f: t => polygon(KOCH, t) },
+  { name: 'Le Croissant', eq: 'deux arcs de cercle : la Lune au cinquième jour', f: t => polygon(MOON, t) },
+  { name: "L'Épicycloïde", eq: 'x = 6 cos t − cos 6t · un cercle qui roule autour d\'un autre : cinq pointes', f: t => [6 * Math.cos(t) - Math.cos(6 * t), 6 * Math.sin(t) - Math.sin(6 * t)] },
+  { name: 'Le Chat', eq: 'quatorze sommets et deux oreilles pointues : les cercles ronronnent', f: t => polygon(CAT, t) },
 ];
 
 // Transformée de Fourier discrète : c_k = (1/N) Σ z_n e^(−2iπkn/N)
@@ -97,6 +134,7 @@ export function create(api) {
     trail = [];
     if (minus) minusUsed = true;
     if (shape?.square && minusUsed && STEPS[nIdx] <= 24) secrets.find('gibbs');
+    if (shape?.ellipse && STEPS[nIdx] === 2) secrets.find('kepler');
     audio.note(nIdx, { type: 'glass', vel: 0.06, dur: 1.2 });
   }
 
@@ -117,7 +155,7 @@ export function create(api) {
     let r = 0;
     for (const [x, y] of pts) r = Math.max(r, Math.hypot(x - mx, y - my));
     pts = pts.map(([x, y]) => [(x - mx) / r, (y - my) / r]);
-    useShape({ name: g.name, eq: g.eq, pts, unit: true, square: !!g.square });
+    useShape({ name: g.name, eq: g.eq, pts, unit: true, square: !!g.square, ellipse: !!g.ellipse });
     setN(11);
   }
   function nextShape() { gallery(galleryIdx + 1); }
@@ -259,6 +297,11 @@ export function create(api) {
     ctx.font = `italic 300 ${W < 560 ? 24 : 30}px "Cormorant Garamond", Georgia, serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.88)';
     ctx.fillText(shape.name, W / 2, 70);
+    if (!shape.user) {
+      ctx.font = '400 8.5px "DM Mono", ui-monospace, monospace';
+      ctx.fillStyle = 'rgba(200,210,255,0.3)';
+      ctx.fillText(`${galleryIdx + 1} / ${GALLERY.length}`, W / 2, 56);
+    }
     ctx.font = '400 10px "DM Mono", ui-monospace, monospace';
     ctx.fillStyle = 'rgba(200,210,255,0.5)';
     ctx.fillText(shape.eq, W / 2, 108, W - 40);

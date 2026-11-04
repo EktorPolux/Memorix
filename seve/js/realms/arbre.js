@@ -40,6 +40,18 @@ const LEAF_DAY = ['#2f6b55', '#4d8a5e', '#25564c'].map(hexToRgb);
 const LEAF_NIGHT = ['#1f7f78', '#4b4796', '#2a7a5c'].map(hexToRgb);
 const GOLD = hexToRgb('#ffd48a');
 const VEL = 1.15; // vitesse de pousse, en unités d'arbre par seconde
+// Le jardin au pied de l'arbre se souvient de ce qu'on y a planté, même après une longue balade
+const GARDEN_KEY = 'seve.jardin';
+const SPROUT_COLS = [[255, 214, 140], [190, 160, 255], [130, 240, 200], [255, 160, 200]];
+const BLOOM_MS = 4 * 60 * 1000; // une pousse met quatre minutes à fleurir
+function loadGarden() {
+  try { const g = JSON.parse(localStorage.getItem(GARDEN_KEY) || '[]'); return Array.isArray(g) ? g.filter(s => s && isFinite(s.u)).slice(-28) : []; } catch (_) { return []; }
+}
+function saveGarden(list) {
+  try {
+    localStorage.setItem(GARDEN_KEY, JSON.stringify(list.map(s => ({ u: +s.u.toFixed(4), h: Math.round(s.h), lean: +s.lean.toFixed(3), curl: +s.curl.toFixed(3), ph: +s.ph.toFixed(2), ci: s.ci, born: s.born, petals: s.petals }))));
+  } catch (_) { /* stockage indisponible : le jardin vivra le temps de la page */ }
+}
 const WK = 0.0158; // épaisseur d'une brindille, en unités d'arbre
 
 // ——— Colonisation de l'espace (Runions, Lane & Prusinkiewicz, 2007)
@@ -192,7 +204,10 @@ export function create(api, meta, opts = {}) {
   let blades = [], flies = [], motes = [];
   const sprouts = [], shooting = [], bursts = [];
   let pulses = [], trunkTaps = [], astreTaps = [], planted = 0;
-  let wind = 0, userWind = 0, parX = 0;
+  let wind = 0, userWind = 0, gust = 0, parX = 0;
+  // deux balanciers : les brindilles répondent vite, le tronc lentement ; tous deux dépassent un peu, puis reviennent
+  const sway = { fast: 0, fastV: 0, slow: 0, slowV: 0 };
+  const hand = { x: -1e4, k: 0 }; // la main qui écarte l'herbe, adoucie
   let vignette = null, moonImg = null, hovered = null;
   let state = opts.intro && !hasGerminated ? 'seed' : 'live';
   let growT = state === 'seed' ? -1 : 999;
@@ -276,9 +291,15 @@ export function create(api, meta, opts = {}) {
     v.fillStyle = grd;
     v.fillRect(0, 0, W, H);
     moonImg = makeMoon(Math.round(Math.min(W, H) * 0.032 + 6));
+    for (const sp of sprouts) sp.x = sp.u * W;
     placeFruits();
   }
   resize(W, H);
+  for (const g of loadGarden()) {
+    const ci = (g.ci | 0) % SPROUT_COLS.length;
+    sprouts.push({ ...g, ci, x: g.u * W, c: SPROUT_COLS[ci], age: 99, born: g.born || Date.now(), petals: g.petals || 5 });
+  }
+  planted = sprouts.length;
 
   const fruitR = () => clamp(S * 0.085, 11, 19);
   const phase = () => (dayClock / DAY) % 1;
@@ -288,12 +309,12 @@ export function create(api, meta, opts = {}) {
 
   // Le vent : brise lente, rafales, et ce que ta main y ajoute. Les brindilles plient plus que le tronc.
   function layout(t) {
-    const wv = wind + userWind;
     const front = growT * VEL;
     for (const n of nodes) {
       const p = n.parent;
       if (!p) { n.abs = 0; n.x1 = rootX; n.y1 = groundY; n.g = 1; continue; }
       n.g = growT >= 900 ? 1 : clamp((front - p.dist) / (n.len * 2 + 0.04), 0, 1);
+      const wv = lerp(sway.fast, sway.slow, clamp((n.w - 0.8) / 4, 0, 1));
       n.abs = p.abs + n.rel + wv * 0.2 / Math.pow(n.w, 0.62) + Math.sin(t * 1.7 + n.ph) * 0.0028 / n.w;
       n.x0 = p.x1; n.y0 = p.y1;
       const L = n.len * S * n.g;
@@ -321,15 +342,26 @@ export function create(api, meta, opts = {}) {
       const c = tree.crown;
       const inX = input.x > rootX + c.minX * S - 40 && input.x < rootX + c.maxX * S + 40;
       const inY = input.y > groundY + c.minY * S - 40 && input.y < groundY + c.maxY * S + 60;
-      if (inX && inY) userWind += clamp(input.vx * 0.0000045, -0.004, 0.004);
+      // la souris effleure (elle passe vite et sans le vouloir) ; le doigt, lui, pousse exprès
+      const gain = input.type === 'mouse' ? 0.0000016 : 0.0000035;
+      if (inX && inY) gust += clamp(input.vx * gain, -0.0015, 0.0015);
     }
-    userWind *= Math.pow(0.18, dt);
-    userWind = clamp(userWind, -0.09, 0.09);
+    gust *= Math.pow(0.35, dt);
+    gust = clamp(gust, -0.05, 0.05);
+    userWind += (gust - userWind) * Math.min(1, dt * 2.2); // l'air met un moment à se mettre en mouvement
+    const force = wind + userWind;
+    sway.fastV += ((force - sway.fast) * 30 - sway.fastV * 4.5) * dt;
+    sway.fast += sway.fastV * dt;
+    sway.slowV += ((force - sway.slow) * 7 - sway.slowV * 2.4) * dt;
+    sway.slow += sway.slowV * dt;
+    const nearGround = input.inside && Math.abs(input.y - groundY) < 90;
+    hand.k += ((nearGround ? 1 : 0) - hand.k) * Math.min(1, dt * 3);
+    if (input.inside) hand.x += (input.x - hand.x) * Math.min(1, dt * (hand.x < -1e3 ? 99 : 5));
     parX += ((input.inside ? input.x - W / 2 : 0) - parX) * Math.min(1, dt * 1.5);
     layout(t);
 
     for (const f of fruits) {
-      const target = (wind + userWind) * 2.2;
+      const target = (sway.fast + sway.slow) * 1.1;
       f.swingV += ((target - f.swing) * 9 - f.swingV * 2.2) * dt;
       f.swing += f.swingV * dt;
       const a = f.anchor, hang = S * 0.06;
@@ -725,10 +757,10 @@ export function create(api, meta, opts = {}) {
     ctx.lineCap = 'round';
     ctx.beginPath();
     for (const b of blades) {
-      let bend = b.lean + Math.sin(t * 1.6 + b.ph + b.x * 0.01) * 0.12 + (wind + userWind) * 6;
-      if (input.inside) {
-        const dx = b.x - input.x, dy = groundY - input.y;
-        if (Math.abs(dx) < 70 && Math.abs(dy) < 90) bend += Math.sign(dx) * (1 - Math.abs(dx) / 70) * 0.9;
+      let bend = b.lean + Math.sin(t * 1.6 + b.ph + b.x * 0.01) * 0.12 + sway.fast * 6;
+      if (hand.k > 0.01) {
+        const d = (b.x - hand.x) / 70;
+        if (Math.abs(d) < 2.5) bend += d * Math.exp(-d * d * 2) * 1.5 * hand.k;
       }
       ctx.moveTo(b.x, groundY + 8);
       ctx.quadraticCurveTo(b.x + Math.sin(bend) * b.h * 0.3, groundY - b.h * 0.4, b.x + Math.sin(bend) * b.h, groundY + 6 - Math.cos(bend) * b.h);
@@ -736,30 +768,49 @@ export function create(api, meta, opts = {}) {
     ctx.stroke();
   }
 
-  // Pousses plantées au pied de l'arbre : tige qui se courbe, deux feuilles, un bourgeon qui luit
+  // Pousses plantées au pied de l'arbre. Elles se souviennent de leur jour de naissance :
+  // d'abord une tige et deux feuilles, puis d'autres feuilles, puis une fleur qui s'ouvre et luit la nuit.
   function drawSprouts(ctx, t, night) {
+    const now = Date.now();
     for (const sp of sprouts) {
       const k = easeOutBack(clamp(sp.age / 2.6, 0, 1));
-      const h = sp.h * k;
-      const sw = Math.sin(t * 1.3 + sp.ph) * 0.08 + (wind + userWind) * 3;
+      const m = clamp((now - sp.born) / BLOOM_MS, 0, 1), bloom = smoothstep(0.3, 1, m);
+      const h = sp.h * k * (1 + 0.45 * m);
+      const sw = Math.sin(t * 1.3 + sp.ph) * 0.08 + sway.fast * 3;
       const tipX = sp.x + Math.sin(sp.lean + sw) * h, tipY = groundY - Math.cos(sp.lean + sw) * h;
+      const cx = sp.x + sp.curl * h * 0.4, cy = groundY - h * 0.5;
       ctx.strokeStyle = rgba(mixRgb([60, 120, 80], [70, 190, 150], night), 0.95);
-      ctx.lineWidth = 1.6;
+      ctx.lineWidth = 1.6 + m * 0.6;
       ctx.beginPath();
       ctx.moveTo(sp.x, groundY + 4);
-      ctx.quadraticCurveTo(sp.x + sp.curl * h * 0.4, groundY - h * 0.5, tipX, tipY);
+      ctx.quadraticCurveTo(cx, cy, tipX, tipY);
       ctx.stroke();
       ctx.fillStyle = rgba(mixRgb([70, 150, 90], [80, 220, 170], night), 0.9);
-      for (const side of [-1, 1]) {
-        const lx = lerp(sp.x, tipX, 0.55), ly = lerp(groundY, tipY, 0.55);
-        const la = -Math.PI / 2 + side * 0.9 + sw;
-        const L = 9 * k;
-        ctx.beginPath();
-        ctx.ellipse(lx + Math.cos(la) * L * 0.5, ly + Math.sin(la) * L * 0.5, L * 0.55, L * 0.22, la, 0, TAU);
-        ctx.fill();
+      const pairs = 1 + Math.min(2, Math.floor(m * 3));
+      for (let j = 0; j < pairs; j++) {
+        const f = [0.55, 0.3, 0.75][j], u = 1 - f;
+        const lx = u * u * sp.x + 2 * u * f * cx + f * f * tipX, ly = u * u * (groundY + 4) + 2 * u * f * cy + f * f * tipY;
+        for (const side of [-1, 1]) {
+          const la = -Math.PI / 2 + side * (0.9 + j * 0.15) + sw;
+          const L = 9 * k * (1 + 0.3 * m) * (j ? 0.8 : 1);
+          ctx.beginPath();
+          ctx.ellipse(lx + Math.cos(la) * L * 0.5, ly + Math.sin(la) * L * 0.5, L * 0.55, L * 0.22, la, 0, TAU);
+          ctx.fill();
+        }
+      }
+      if (bloom > 0.02) {
+        // la fleur : des pétales qui s'écartent du bourgeon, et tournent un peu avec le vent
+        const n = sp.petals, pr = (3 + 6 * bloom) * k;
+        ctx.fillStyle = rgba(mixRgb(sp.c, [255, 255, 255], 0.25), 0.55 + 0.35 * bloom);
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * TAU + sp.ph + sw * 2;
+          ctx.beginPath();
+          ctx.ellipse(tipX + Math.cos(a) * pr * 0.75, tipY + Math.sin(a) * pr * 0.75, pr * 0.62, pr * 0.3, a, 0, TAU);
+          ctx.fill();
+        }
       }
       ctx.globalCompositeOperation = 'lighter';
-      drawGlow(ctx, glow(sp.c, 16), tipX, tipY, 6 + 4 * k, 0.6 + 0.3 * night);
+      drawGlow(ctx, glow(sp.c, 16), tipX, tipY, 6 + 4 * k + bloom * 6, 0.6 + 0.3 * night + bloom * 0.25 * night);
       ctx.globalCompositeOperation = 'source-over';
     }
   }
@@ -842,10 +893,11 @@ export function create(api, meta, opts = {}) {
     }
     // le sol : planter une pousse
     if (p.y > groundY - 14) {
-      const c = [[255, 214, 140], [190, 160, 255], [130, 240, 200], [255, 160, 200]][planted % 4];
-      sprouts.push({ x: p.x, h: 26 + Math.random() * 30, lean: (Math.random() - 0.5) * 0.5, curl: (Math.random() - 0.5) * 0.6, ph: Math.random() * TAU, age: 0, c });
+      const ci = planted % SPROUT_COLS.length;
+      sprouts.push({ u: p.x / W, x: p.x, h: 26 + Math.random() * 30, lean: (Math.random() - 0.5) * 0.5, curl: (Math.random() - 0.5) * 0.6, ph: Math.random() * TAU, age: 0, ci, c: SPROUT_COLS[ci], born: Date.now(), petals: 5 + Math.floor(Math.random() * 3) });
       if (sprouts.length > 28) sprouts.shift();
       planted++;
+      saveGarden(sprouts);
       audio.note(8 + (planted % 5), { type: 'pluck', vel: 0.16, dur: 1.2 });
       if (planted >= 7) secrets.find('jardinier');
       return;

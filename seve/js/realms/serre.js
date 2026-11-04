@@ -15,6 +15,24 @@ const SEASONS = [
 const YEAR = SEASONS.reduce((s, x) => s + x.len, 0);
 const SEG = 5; // longueur d'un segment de liane, en pixels
 const GOLDEN = 137.508 * Math.PI / 180;
+// L'hérédité : chaque liane porte un petit génome (couleur et forme de ses fleurs, taille des feuilles, vigueur,
+// couleur des fruits). Ses graines en héritent, avec de petites mutations : la serre dérive de génération en génération.
+const FTYPES = ['rosace', 'cloche', 'anemone', 'etoile'];
+function randomGenome() {
+  return { hue: Math.random() * 360, sat: 64 + Math.random() * 26, lig: 60 + Math.random() * 14, ftype: FTYPES[(Math.random() * 3) | 0], k: [3, 4, 5, 6, 7][(Math.random() * 5) | 0], leaf: 0.8 + Math.random() * 0.4, speed: 0.9 + Math.random() * 0.25, fruit: Math.random() * 360, gen: 1 };
+}
+function mutate(g) {
+  const m = { ...g, gen: g.gen + 1 };
+  m.hue = (g.hue + (Math.random() - 0.5) * 50 + 360) % 360;
+  m.sat = clamp(g.sat + (Math.random() - 0.5) * 16, 40, 98);
+  m.lig = clamp(g.lig + (Math.random() - 0.5) * 10, 48, 82);
+  if (Math.random() < 0.3) m.k = clamp(g.k + (Math.random() < 0.5 ? -1 : 1), 3, 9);
+  m.leaf = clamp(g.leaf + (Math.random() - 0.5) * 0.22, 0.6, 1.6);
+  m.speed = clamp(g.speed + (Math.random() - 0.5) * 0.12, 0.75, 1.35);
+  if (Math.random() < 0.14) m.ftype = FTYPES[(Math.random() * FTYPES.length) | 0]; // parfois, une forme nouvelle apparaît
+  m.fruit = (g.fruit + (Math.random() - 0.5) * 40 + 360) % 360;
+  return m;
+}
 
 export function create(api) {
   const { audio, secrets, input, engine } = api;
@@ -26,6 +44,8 @@ export function create(api) {
   let clock = 3; // secondes depuis le début de l'année
   let lastSeason = -1, sawWinter = false;
   const vines = [], falling = [], flowers = [], croziers = [], snow = [], motes = [], bursts = [];
+  const fruits = [], seeds = []; // fruits suspendus ou tombés, graines qui attendent le printemps
+  let renewT = 2, maxGen = 1;
   let sunflower = null;
   const light = { x: 0, y: 0, power: 1, hold: 0, holdX: 0, holdY: 0 };
   let totalPts = 0, lastPluck = 0, lastBurst = -9;
@@ -96,11 +116,13 @@ export function create(api) {
     const v = {
       pts: [{ x, y, born: clock }], tip: { x, y }, dir, acc: 0, len: 0,
       maxLen: o.maxLen ?? lerp(H * 0.45, H * 1.1, Math.random()),
-      speed: o.speed ?? 26 + Math.random() * 16, turn: o.turn ?? 1.1 + Math.random() * 0.8,
+      genome: o.genome || randomGenome(),
+      speed: (o.speed ?? 26 + Math.random() * 16) * (o.genome ? o.genome.speed : 1), turn: o.turn ?? 1.1 + Math.random() * 0.8,
       kind: o.kind || 'liane', depth: o.depth || 0, curl: o.curl ?? (Math.random() < 0.5 ? -1 : 1),
       wmax: o.wmax ?? (o.depth ? Math.max(1.4, 4.2 - o.depth * 1.1) : 4.6), seed: Math.random() * 100,
       alive: true, leaves: [], side: 1, fade: 1, dying: false, hue: Math.random(),
     };
+    maxGen = Math.max(maxGen, v.genome.gen);
     vines.push(v);
     return v;
   }
@@ -112,16 +134,13 @@ export function create(api) {
 
   function addLeaf(v, i) {
     v.side = -v.side;
-    v.leaves.push({ i, side: v.side, size: 7 + Math.random() * 9, born: clock, state: 'on', hueJ: Math.random(), turnAt: 0, fallAt: 0 });
+    v.leaves.push({ i, side: v.side, size: (7 + Math.random() * 9) * v.genome.leaf, born: clock, state: 'on', hueJ: Math.random(), turnAt: 0, fallAt: 0 });
   }
 
   function bloom(x, y, opts = {}) {
     if (flowers.length > 130 * q) flowers.shift();
-    const types = ['rosace', 'rosace', 'cloche', 'anemone'];
-    const type = opts.type || types[(Math.random() * types.length) | 0];
-    const palette = [[330, 80, 72], [12, 85, 64], [48, 95, 62], [280, 70, 72], [195, 80, 70], [0, 0, 96]];
-    const [h, s, l] = palette[(Math.random() * palette.length) | 0];
-    flowers.push({ x, y, type, k: [3, 5, 4, 6, 7][(Math.random() * 5) | 0], size: (opts.size || 1) * (9 + Math.random() * 10), born: clock, c: hslToRgb(h + (Math.random() - 0.5) * 20, s, l), rot: Math.random() * TAU, ph: Math.random() * TAU, dying: 0 });
+    const g = opts.genome || randomGenome();
+    flowers.push({ x, y, type: g.ftype, k: g.k, size: (opts.size || 1) * (9 + Math.random() * 10), born: clock, c: hslToRgb(g.hue + (Math.random() - 0.5) * 14, g.sat, g.lig), rot: Math.random() * TAU, ph: Math.random() * TAU, dying: 0, g, fruited: false });
     if (clock - lastPluck > 0.15) { lastPluck = clock; audio.note(4 + ((Math.random() * 8) | 0), { type: 'bell', vel: 0.07, dur: 2.2, send: 0.5, pan: (x / W) * 2 - 1 }); }
   }
 
@@ -151,10 +170,10 @@ export function create(api) {
         if (v.kind === 'liane') {
           if (n % 4 === 0) addLeaf(v, n - 1);
           if (Math.random() < (v.depth < 2 ? 0.02 : 0.008) && totalPts < LIMIT) {
-            spawnVine(tip.x, tip.y, v.dir + (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.6), { depth: v.depth + 1, maxLen: (v.maxLen - v.len) * 0.75 + 40 });
+            spawnVine(tip.x, tip.y, v.dir + (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.6), { depth: v.depth + 1, maxLen: (v.maxLen - v.len) * 0.75 + 40, genome: v.genome });
           }
           if (Math.random() < 0.028 && totalPts < LIMIT) {
-            spawnVine(tip.x, tip.y, v.dir + (Math.random() < 0.5 ? -1.2 : 1.2), { kind: 'vrille', maxLen: 30 + Math.random() * 70, speed: 30, wmax: 1, depth: v.depth + 1 });
+            spawnVine(tip.x, tip.y, v.dir + (Math.random() < 0.5 ? -1.2 : 1.2), { kind: 'vrille', maxLen: 30 + Math.random() * 70, speed: 30, wmax: 1, depth: v.depth + 1, genome: v.genome });
           }
         }
       }
@@ -167,10 +186,10 @@ export function create(api) {
           if (reached && clock - lastBurst > 1.5) {
             lastBurst = clock;
             const n = v.pts.length;
-            for (let j = 0; j < 5; j++) { const p = v.pts[Math.max(0, n - 1 - j * 3)]; bloom(p.x, p.y, { size: 1.2 }); }
+            for (let j = 0; j < 5; j++) { const p = v.pts[Math.max(0, n - 1 - j * 3)]; bloom(p.x, p.y, { size: 1.2, genome: v.genome }); }
             burst(tip.x, tip.y, [255, 230, 160], 26, 150);
-            for (let j = 0; j < 2; j++) spawnVine(tip.x, tip.y, v.dir + (j ? 1.4 : -1.4), { kind: 'vrille', maxLen: 50 + Math.random() * 60, speed: 32, wmax: 1, depth: v.depth + 1 });
-          } else if (Math.random() < 0.75 && se.i < 2) bloom(tip.x, tip.y);
+            for (let j = 0; j < 2; j++) spawnVine(tip.x, tip.y, v.dir + (j ? 1.4 : -1.4), { kind: 'vrille', maxLen: 50 + Math.random() * 60, speed: 32, wmax: 1, depth: v.depth + 1, genome: v.genome });
+          } else if (Math.random() < 0.75 && se.i < 2) bloom(tip.x, tip.y, { genome: v.genome });
         }
       }
     }
@@ -182,7 +201,8 @@ export function create(api) {
     clock += dt;
     const se = seasonAt(clock);
     if (se.i !== lastSeason) onSeason(se, lastSeason);
-    if (se.s.name !== label) { label = se.s.name; api.label(label); }
+    const lab = se.s.name + (maxGen > 1 ? ` · génération ${maxGen}` : '');
+    if (lab !== label) { label = lab; api.label(label); }
 
     // la lumière : ta main, ou un feu follet qui erre quand tu n'es pas là
     let tx, ty;
@@ -200,6 +220,8 @@ export function create(api) {
     } else { light.holdT = 0; light.holdX = input.x; light.holdY = input.y; }
 
     growVines(dt, se);
+    renew(dt, se);
+    fruitCycle(dt, se, t);
 
     // feuilles : en automne elles rougissent puis tombent ; au printemps elles reviennent
     if (se.i === 2) {
@@ -229,7 +251,7 @@ export function create(api) {
     // en été, des bourgeons éclosent le long des tiges
     if ((se.i === 1 || (se.i === 0 && se.p > 0.5)) && Math.random() < dt * 0.9) {
       const v = vines[(Math.random() * vines.length) | 0];
-      if (v && v.kind === 'liane' && v.pts.length > 8) { const p = v.pts[(Math.random() * v.pts.length) | 0]; bloom(p.x, p.y, { size: 0.7 }); }
+      if (v && v.kind === 'liane' && v.pts.length > 8) { const p = v.pts[(Math.random() * v.pts.length) | 0]; bloom(p.x, p.y, { size: 0.7, genome: v.genome }); }
     }
     // des crosses de fougère sortent du sol au printemps
     if (se.i === 0 && croziers.length < 7 && Math.random() < dt * 0.12) {
@@ -259,6 +281,62 @@ export function create(api) {
     if (sunflower) sunflower.age += dt;
   }
 
+  // ——— La serre ne s'arrête jamais : une liane finie se réveille, ou bourgeonne ; les plus vieilles cèdent la place
+  function renew(dt, se) {
+    const grow = blend('grow', se);
+    renewT -= dt * (0.4 + grow);
+    if (renewT > 0 || grow < 0.15) return;
+    renewT = 1.4 + Math.random() * 2.2;
+    if (totalPts > LIMIT * 0.8) {
+      let old = null;
+      for (const v of vines) if (!v.alive && !v.dying && v.kind === 'liane' && (!old || v.pts[0].born < old.pts[0].born)) old = v;
+      if (old) old.dying = true;
+      return;
+    }
+    const cands = vines.filter(v => !v.alive && !v.dying && v.kind === 'liane' && v.pts.length > 6);
+    const v = cands[(Math.random() * cands.length) | 0];
+    if (!v) return;
+    const inside = v.tip.x > 10 && v.tip.x < W - 10 && v.tip.y > 10 && v.tip.y < groundY - 10;
+    if (inside && Math.random() < 0.55) { v.alive = true; v.maxLen = v.len + 60 + Math.random() * 140; }
+    else {
+      const p = v.pts[(Math.random() * v.pts.length) | 0];
+      spawnVine(p.x, p.y, -Math.PI / 2 + (Math.random() - 0.5) * 1.6, { depth: v.depth + 1, maxLen: 80 + Math.random() * 180, genome: v.genome });
+    }
+  }
+  // ——— Fleurs → fruits → graines : en été les fleurs nouent, en automne les fruits mûrs tombent et se plantent
+  function fruitCycle(dt, se, t) {
+    if (se.i === 1 || (se.i === 0 && se.p > 0.6)) {
+      for (const f of flowers) {
+        if (f.fruited || f.dying || !f.g || clock - f.born < 9 || fruits.length > 70 * q) continue;
+        if (Math.random() < dt * 0.07) {
+          f.fruited = true; f.dying = 0.01;
+          const n = 1 + ((Math.random() * 3) | 0);
+          for (let i = 0; i < n; i++) fruits.push({ x: f.x + (i - (n - 1) / 2) * 6, y: f.y + 4 + (i % 2) * 4, born: clock, g: f.g, state: 'hang', vx: 0, vy: 0, r: 3 + Math.random() * 1.6, dropAt: 0 });
+        }
+      }
+    }
+    if (se.i >= 2) for (const fr of fruits) if (fr.state === 'hang' && !fr.dropAt) fr.dropAt = clock + Math.random() * (se.i === 2 ? SEASONS[2].len * 0.8 : 3);
+    for (let i = fruits.length - 1; i >= 0; i--) {
+      const fr = fruits[i];
+      if (fr.state === 'hang') {
+        if (fr.dropAt && clock > fr.dropAt) { fr.state = 'fall'; fr.vx = (Math.random() - 0.5) * 30; fr.vy = -10; }
+        continue;
+      }
+      fr.vy += 220 * dt;
+      fr.x += fr.vx * dt; fr.y += fr.vy * dt;
+      if (fr.y > groundY - fr.r) {
+        fr.y = groundY - fr.r;
+        if (Math.abs(fr.vy) > 40) { fr.vy *= -0.35; fr.vx *= 0.7; audio.play(audio.freq(2 + ((fr.g.fruit / 60) | 0), 1), { type: 'drop', vel: 0.03, dur: 0.4, pan: (fr.x / W) * 2 - 1 }); }
+        else {
+          // le fruit s'enfonce : c'est une graine, qui portera un génome un peu différent
+          if (seeds.length >= 14) seeds.shift();
+          seeds.push({ x: clamp(fr.x, 20, W - 20), g: mutate(fr.g), ph: Math.random() * TAU });
+          fruits.splice(i, 1);
+        }
+      }
+    }
+  }
+
   function onSeason(se, prev) {
     lastSeason = se.i;
     const chord = [[0, 2, 4], [1, 4, 6], [2, 5, 7], [-1, 2, 4]][se.i];
@@ -280,7 +358,10 @@ export function create(api) {
     }
     if (se.i === 0 && prev !== -1) {
       for (const v of vines) for (const l of v.leaves) if (l.state === 'gone' && !v.dying) { l.state = 'on'; l.born = clock + Math.random() * 6; }
-      for (let k = 0; k < 4; k++) seedAt(40 + Math.random() * (W - 80), groundY, false);
+      const sown = seeds.splice(0, 7);
+      for (const sd of sown) spawnVine(sd.x, groundY, -Math.PI / 2 + (Math.random() - 0.5) * 0.5, { genome: sd.g, maxLen: lerp(H * 0.45, H * 0.95, Math.random()) });
+      if (sown.some(sd => sd.g.gen >= 4)) secrets.find('lignee');
+      for (let k = sown.length; k < 3; k++) seedAt(40 + Math.random() * (W - 80), groundY, false);
       const living = vines.filter(v => !v.dying && v.kind === 'liane' && v.pts.length > 10);
       for (let k = 0; k < Math.min(5, living.length); k++) {
         const v = living[(Math.random() * living.length) | 0];
@@ -338,7 +419,8 @@ export function create(api) {
       L.push(x + nx * w, p.y + ny * w);
       Rr.push(x - nx * w, p.y - ny * w);
     }
-    ctx.fillStyle = rgba(stemC, alpha);
+    const wood = clamp((clock - v.pts[0].born - 60) / 220, 0, 0.6);
+    ctx.fillStyle = rgba(wood > 0 ? mixRgb(stemC, [92, 72, 52], wood) : stemC, alpha);
     ctx.beginPath();
     ctx.moveTo(L[0], L[1]);
     for (let i = 2; i < L.length; i += 2) ctx.lineTo(L[i], L[i + 1]);
@@ -416,6 +498,19 @@ export function create(api) {
       ctx.strokeStyle = 'rgba(255,240,200,0.8)';
       ctx.lineWidth = 0.8;
       ctx.beginPath(); ctx.moveTo(bx, by + s); ctx.lineTo(bx, by + s * 1.6); ctx.stroke();
+    } else if (f.type === 'etoile') {
+      // l'étoile : n'apparaît que par mutation
+      const n = f.k * 2;
+      ctx.fillStyle = rgba(f.c, 0.92);
+      ctx.beginPath();
+      for (let i = 0; i <= n; i++) {
+        const a = rot + (i / n) * TAU, r = i % 2 ? s * 0.36 : s * 1.12;
+        const x = f.x + Math.cos(a) * r, y = f.y + Math.sin(a) * r;
+        if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+      }
+      ctx.fill();
+      ctx.fillStyle = rgba(mixRgb(f.c, [255, 255, 255], 0.6), 0.95);
+      ctx.beginPath(); ctx.arc(f.x, f.y, s * 0.22, 0, TAU); ctx.fill();
     } else {
       // anémone extravagante : des filaments qui ondulent, terminés par des perles de lumière
       const nF = 16;
@@ -439,6 +534,33 @@ export function create(api) {
       ctx.globalCompositeOperation = 'source-over';
     }
     ctx.globalAlpha = 1;
+  }
+
+  // Fruits : verts d'abord, puis de la couleur que dit leur génome ; graines : de petites perles dans le sol
+  function drawFruits(ctx, t) {
+    for (const fr of fruits) {
+      const ripe = clamp((clock - fr.born) / 18, 0, 1);
+      const c = mixRgb([110, 168, 70], hslToRgb(fr.g.fruit, 62, 46), ripe);
+      const sw = fr.state === 'hang' ? Math.sin(t * 1.3 + fr.x * 0.05) * 1.2 : 0;
+      if (fr.state === 'hang') {
+        ctx.strokeStyle = 'rgba(90,120,70,0.7)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(fr.x, fr.y - fr.r - 5); ctx.lineTo(fr.x + sw, fr.y - fr.r); ctx.stroke();
+      }
+      ctx.fillStyle = rgba(c, 0.96);
+      ctx.beginPath(); ctx.arc(fr.x + sw, fr.y, fr.r * (0.7 + 0.3 * ripe), 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath(); ctx.arc(fr.x + sw - fr.r * 0.3, fr.y - fr.r * 0.35, fr.r * 0.25, 0, TAU); ctx.fill();
+    }
+    for (const sd of seeds) {
+      const c = hslToRgb(sd.g.fruit, 40, 30);
+      ctx.fillStyle = rgba(c, 0.9);
+      ctx.beginPath(); ctx.ellipse(sd.x, groundY + 3, 3.2, 2, 0, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'lighter';
+      drawGlow(ctx, glow(hslToRgb(sd.g.hue, 80, 65).map(Math.round), 12), sd.x, groundY + 2, 5, 0.18 + 0.12 * Math.sin(t * 1.4 + sd.ph));
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    }
   }
 
   // Crosse de fougère : une clothoïde dont la courbure décroît pendant qu'elle se déroule
@@ -563,6 +685,7 @@ export function create(api) {
     for (const v of vines) drawVine(ctx, v, t, stemC);
     drawLeaves(ctx, t, se);
     for (const f of flowers) drawFlower(ctx, f, t);
+    drawFruits(ctx, t);
     if (sunflower) drawSunflower(ctx, t);
 
     // sève : des perles de lumière qui circulent dans les tiges
