@@ -1,5 +1,5 @@
 // Sève — Les Racines : sous l'arbre, ce qui relie tout. Et tout au fond, un cœur qui est une équation.
-import { TAU, clamp, lerp, glow, drawGlow, rgba, hslToRgb, makeCanvas, makeNoise, rng } from '../engine.js';
+import { TAU, clamp, lerp, glow, drawGlow, rgba, hslToRgb, makeCanvas, makeNoise, rng, makeLayer, blit } from '../engine.js';
 
 export const mood = {
   root: 55, scale: 'phrygian', wave: 'sine', chord: [0, 7, 12, 15], pad: 0.065, cutoff: 320, lfo: 0.02, droneOct: 1,
@@ -80,7 +80,7 @@ export function create(api) {
     bufView = null;
     startRender(view);
 
-    strata = makeCanvas(W, H);
+    strata = makeLayer(engine);
     const g = strata.getContext('2d');
     const bands = 9;
     for (let b = 0; b < bands; b++) {
@@ -192,7 +192,7 @@ export function create(api) {
   }
 
   function draw(ctx, t) {
-    ctx.drawImage(strata, 0, 0, W, H);
+    blit(ctx, strata);
     // fossiles et cristaux
     ctx.strokeStyle = 'rgba(214,180,120,0.28)';
     ctx.lineWidth = 1.2;

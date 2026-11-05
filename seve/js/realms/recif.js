@@ -97,8 +97,9 @@ export function create(api) {
   let selected = null, selT = 0, lastMelody = -9;
   const plankton = [], bubbles = [], jellies = [], sparks = [], rocks = [];
   let digits = '';
-  // Les coraux bougent lentement : on les peint sur un calque, repeint quinze fois par seconde, pas à chaque image
-  let coralCv = null, coralCtx = null, coralDirty = true;
+  // Les coraux bougent lentement : chaque colonie a son calque, à sa mesure, et on en repeint une par image,
+  // à tour de rôle. Chacune bouge ainsi douze fois par seconde, sans que tout le récif se repeigne d'un coup.
+  let coralDirty = true, coralTurn = 0;
 
   function layout() {
     seabed = H - Math.max(40, H * 0.08);
@@ -128,6 +129,16 @@ export function create(api) {
       let g = p.groups.get(key);
       if (!g) p.groups.set(key, (g = { band, wq, nodes: [] }));
       g.nodes.push(n);
+    }
+    // des tiges continues plutôt que des tronçons : bien moins de bouts arrondis à peindre
+    for (const g of p.groups.values()) {
+      const tail = new Map();
+      g.chains = [];
+      for (const n of g.nodes) {
+        const ch = tail.get(n.parent);
+        if (ch) { ch.push(n); tail.delete(n.parent); tail.set(n, ch); }
+        else { const c2 = [n]; g.chains.push(c2); tail.set(n, c2); }
+      }
     }
     p.tips = p.order.filter(n => n.kids.length === 0);
     p.sway = new Float32Array(p.maxD + 2);
@@ -206,28 +217,38 @@ export function create(api) {
     }
   }
 
-  function paintCoral(t) {
-    const dpr = engine.dpr || 1, w = Math.round(W * dpr), h = Math.round(H * dpr);
-    if (!coralCv || coralCv.width !== w || coralCv.height !== h) { coralCv = makeCanvas(w, h); coralCtx = coralCv.getContext('2d'); }
-    const g = coralCtx, day = 0.5 + 0.5 * Math.sin((t / CYCLE) * TAU);
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.clearRect(0, 0, w, h);
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    for (const c of colonies) drawColony(g, c, 1 - day);
-    for (const rk of rocks) {
-      const gr = g.createLinearGradient(0, seabed - rk.h, 0, seabed + rk.h * 0.6);
-      gr.addColorStop(0, rgba(mixRgb([30, 36, 44], [62, 70, 78], day)));
-      gr.addColorStop(1, rgba(mixRgb([8, 12, 16], [20, 26, 32], day)));
-      g.fillStyle = gr;
-      g.beginPath(); g.ellipse(rk.x, seabed + 3, rk.w / 2, rk.h, 0, Math.PI, TAU); g.fill();
+  // une colonie sur son calque, cadré au pixel près de l'écran pour ne rien flouter
+  function paintColony(c, t) {
+    for (const p of c.copies) layoutPlant(p, c, t);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of c.copies) for (const n of p.order) {
+      if (n.x < x0) x0 = n.x;
+      if (n.x > x1) x1 = n.x;
+      if (n.y < y0) y0 = n.y;
+      if (n.y > y1) y1 = n.y;
     }
+    const dpr = engine.dpr || 1, pad = 4 + c.wk * 4;
+    const ox = Math.floor((x0 - pad) * dpr), oy = Math.floor((y0 - pad) * dpr);
+    const w = Math.ceil((x1 + pad) * dpr) - ox, h = Math.ceil((y1 + pad) * dpr) - oy;
+    if (!c.cv || c.cv.width < w || c.cv.height < h) {
+      c.cv = makeCanvas(Math.ceil(w * 1.08) + 8, Math.ceil(h * 1.08) + 8);
+      c.cx = c.cv.getContext('2d');
+    }
+    const g = c.cx;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, Math.max(w, c.w || 0), Math.max(h, c.h || 0));
+    g.setTransform(dpr, 0, 0, dpr, -ox, -oy);
+    drawColony(g, c, 0.5 - 0.5 * Math.sin((t / CYCLE) * TAU));
+    c.ox = ox; c.oy = oy; c.w = w; c.h = h;
   }
 
   function update(dt, t) {
-    if (coralDirty || engine.frame % 5 === 0) {
+    if (coralDirty) {
       coralDirty = false;
-      for (const c of colonies) for (const p of c.copies) layoutPlant(p, c, t);
-      paintCoral(t);
+      for (const c of colonies) paintColony(c, t);
+    } else {
+      coralTurn = (coralTurn + 1) % colonies.length;
+      paintColony(colonies[coralTurn], t);
     }
     // plancton : il s'allume quand on le dérange
     for (const pk of plankton) {
@@ -271,7 +292,13 @@ export function create(api) {
       j.vy += -Math.cos(j.a) * thrust * dt + 4 * dt; // et entre deux battements, elle se laisse couler
       j.vx *= Math.pow(0.5, dt); j.vy *= Math.pow(0.5, dt);
       j.x += j.vx * dt; j.y += j.vy * dt;
-      if (j.x < -80) j.x = W + 80; if (j.x > W + 80) j.x = -80;
+      // sortie d'un côté, retour par l'autre : tentacules compris (sinon ils traversent tout l'écran pour la rattraper)
+      if (j.x < -80 || j.x > W + 80) {
+        const dx = j.x < -80 ? W + 160 : -(W + 160);
+        j.x += dx; j.tx += dx;
+        for (const ch of j.tents) for (const pt of ch.pts) { pt.x += dx; pt.px += dx; }
+        for (const ch of j.arms) for (const pt of ch.pts) { pt.x += dx; pt.px += dx; }
+      }
       j.alarm = Math.max(0, j.alarm - dt * 0.33);
       // tentacules et bras : la tête suit la cloche, le reste suit la tête
       const an = anchors(j), g = 14;
@@ -319,7 +346,15 @@ export function create(api) {
     }
     ctx.stroke();
 
-    if (coralCv) ctx.drawImage(coralCv, 0, 0, W, H);
+    const dpr = engine.dpr || 1;
+    for (const c of colonies) if (c.cv) ctx.drawImage(c.cv, 0, 0, c.w, c.h, c.ox / dpr, c.oy / dpr, c.w / dpr, c.h / dpr);
+    for (const rk of rocks) {
+      const gr = ctx.createLinearGradient(0, seabed - rk.h, 0, seabed + rk.h * 0.6);
+      gr.addColorStop(0, rgba(mixRgb([30, 36, 44], [62, 70, 78], day)));
+      gr.addColorStop(1, rgba(mixRgb([8, 12, 16], [20, 26, 32], day)));
+      ctx.fillStyle = gr;
+      ctx.beginPath(); ctx.ellipse(rk.x, seabed + 3, rk.w / 2, rk.h, 0, Math.PI, TAU); ctx.fill();
+    }
     drawPolyps(ctx, t, night);
     if (selected) drawPath(ctx, t);
 
@@ -350,7 +385,7 @@ export function create(api) {
     for (const p of c.copies) for (const [key, g] of p.groups) {
       let l = byKey.get(key);
       if (!l) byKey.set(key, (l = { path: new Path2D(), k: g.band / 7, w: Math.max(0.7, (0.55 + g.wq * 0.62) * c.wk) }));
-      for (const n of g.nodes) { l.path.moveTo(n.parent.x, n.parent.y); l.path.lineTo(n.x, n.y); }
+      for (const ch of g.chains) { l.path.moveTo(ch[0].parent.x, ch[0].parent.y); for (const n of ch) l.path.lineTo(n.x, n.y); }
     }
     const layers = [...byKey.values()];
     // l'ombre ne sert qu'aux branches assez épaisses pour qu'on la voie ; les fines la remplacent par un ton plus sourd

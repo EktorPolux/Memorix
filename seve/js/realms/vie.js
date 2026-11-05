@@ -1,6 +1,7 @@
 // Sève — La Cité de Conway : naître avec trois voisins, survivre avec deux ou trois (Conway, 1970).
 // Une tête de lecture balaie la cité : chaque colonne vivante devient un accord.
-import { clamp, glow, drawGlow, makeCanvas } from '../engine.js';
+import { clamp, glow, drawGlow, makeCanvas, makeLayer, blit } from '../engine.js';
+import { rle, unrle } from '../memory.js';
 
 export const mood = { root: 196, scale: 'majPenta', wave: 'sine', chord: [0, 7, 12], pad: 0.03, cutoff: 900, lfo: 0.03, motif: false };
 
@@ -72,7 +73,7 @@ export function create(api) {
     img = octx.createImageData(cols, rows); b32 = new Uint32Array(img.data.buffer);
     half = makeCanvas(Math.ceil(cols / 2), Math.ceil(rows / 2)); hctx = half.getContext('2d');
     // le plan de la cité : une grille très fine
-    grid = makeCanvas(W, H);
+    grid = makeLayer(engine);
     const g = grid.getContext('2d');
     g.fillStyle = '#04060c'; g.fillRect(0, 0, W, H);
     if (cs >= 6) {
@@ -102,8 +103,18 @@ export function create(api) {
     if (name === 'rpento') rpento = gen;
     audio.note(5 + Object.keys(PATTERNS).indexOf(name), { type: 'bell', vel: 0.1, dur: 2 });
   }
-  soup(0.28);
-  stamp('planeur', 6, 6);
+  // la cité se souvient : ses vivants, sa règle et son âge reviennent tels que tu les avais laissés
+  const saved = api.memory?.get('vie');
+  if (saved && saved.runs && saved.cols > 0 && saved.rows > 0) {
+    const old = unrle(saved.runs, new Uint8Array(saved.cols * saved.rows));
+    for (let y = 0; y < Math.min(rows, saved.rows); y++) for (let x = 0; x < Math.min(cols, saved.cols); x++) { const v = old[y * saved.cols + x] ? 1 : 0; cur[y * cols + x] = v; age[y * cols + x] = v; }
+    rule = (saved.rule | 0) % RULES.length;
+    gen = saved.gen | 0;
+  } else {
+    soup(0.28);
+    stamp('planeur', 6, 6);
+  }
+  function save() { api.memory?.set('vie', { cols, rows, rule, gen, runs: rle(cur) }); }
 
   // ——— Une génération, sur un tore : le bord droit touche le bord gauche
   function step() {
@@ -155,7 +166,7 @@ export function create(api) {
   }
 
   function draw(ctx, t) {
-    ctx.drawImage(grid, 0, 0, W, H);
+    blit(ctx, grid);
     // l'âge colore les quartiers : les nouveaux-nés brillent, les anciens bleuissent ; les morts laissent une braise
     for (let i = 0; i < cur.length; i++) {
       if (cur[i]) {
@@ -238,7 +249,7 @@ export function create(api) {
   }
 
   return {
-    resize, update, draw, down, move, up, tap,
+    resize, update, draw, down, move, up, tap, save,
     words: { conway: () => stamp('canon', Math.floor(cols / 2), Math.floor(rows / 2)) },
     destroy() { bar.remove(); },
   };

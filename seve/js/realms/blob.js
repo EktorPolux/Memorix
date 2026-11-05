@@ -209,6 +209,15 @@ export function create(api) {
   }
 
   resize(W, H);
+  // la boîte se souvient de l'avoine que tu y as posée (ou retirée)
+  {
+    const saved = api.memory?.get('blob');
+    if (saved && Array.isArray(saved.f)) {
+      foods.length = 0;
+      for (const o of saved.f.slice(0, 40)) if (Number.isFinite(o.x) && Number.isFinite(o.y)) foods.push({ gx: o.x * cols, gy: o.y * rows, r: o.r || 2.6, rot: Math.random() * TAU });
+    }
+  }
+  function save() { if (mode === 'libre') api.memory?.set('blob', { f: foods.map(fd => ({ x: Math.round((fd.gx / cols) * 10000) / 10000, y: Math.round((fd.gy / rows) * 10000) / 10000, r: fd.r })) }); }
   for (let k = 0; k < 60; k++) step();
 
   function update(dt, t) {
@@ -384,5 +393,5 @@ export function create(api) {
   function up() { stroke = null; light = null; }
   function longpress(p) { light = { x: p.x, y: p.y }; audio.note(9, { type: 'soft', vel: 0.08, dur: 2 }); }
 
-  return { resize, update, draw, tap, down, move, up, longpress, words: { tokyo: startTokyo }, destroy() {} };
+  return { resize, update, draw, tap, down, move, up, longpress, save, words: { tokyo: startTokyo }, destroy() {} };
 }

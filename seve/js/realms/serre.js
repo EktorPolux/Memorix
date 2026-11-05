@@ -1,5 +1,5 @@
 // Sève — La Serre aux Lianes : des lianes qui cherchent ta lumière, et quatre saisons qui passent sur elles.
-import { TAU, clamp, lerp, smoothstep, angleDiff, glow, drawGlow, hexToRgb, rgba, mixRgb, hslToRgb, makeCanvas, makeNoise, easeOutBack } from '../engine.js';
+import { TAU, clamp, lerp, smoothstep, angleDiff, glow, drawGlow, hexToRgb, rgba, mixRgb, hslToRgb, makeCanvas, makeNoise, easeOutBack, makeLayer, blit } from '../engine.js';
 
 export const mood = {
   root: 174.61, scale: 'lydian', wave: 'triangle', chord: [0, 7, 11, 16], pad: 0.042, cutoff: 1100, lfo: 0.04,
@@ -68,7 +68,7 @@ export function create(api) {
 
   // ——— La serre : armature de fer et vitres, dessinée une fois
   function buildFrame() {
-    frame = makeCanvas(W, H);
+    frame = makeLayer(engine);
     const g = frame.getContext('2d');
     const cols = Math.max(4, Math.round(W / 190));
     g.strokeStyle = 'rgba(190,225,210,0.07)';
@@ -666,7 +666,7 @@ export function create(api) {
     bg.addColorStop(1, rgba(bot));
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
-    ctx.drawImage(frame, 0, 0, W, H);
+    blit(ctx, frame);
 
     // halo de la lumière, derrière les plantes
     ctx.globalCompositeOperation = 'lighter';
@@ -747,13 +747,29 @@ export function create(api) {
   function longpress() { audio.note(7, { type: 'soft', vel: 0.1, dur: 3, send: 0.6 }); }
 
   // Premières pousses : depuis le sol, et deux lianes qui pendent de l'armature
-  for (let i = 0; i < 5; i++) spawnVine(W * (0.1 + 0.8 * (i + Math.random() * 0.6) / 5), groundY, -Math.PI / 2 + (Math.random() - 0.5) * 0.5);
+  // la serre se souvient de sa lignée et de sa saison : les lianes repoussent de la dernière génération,
+  // et les graines tombées attendent toujours leur printemps
+  const saved = api.memory?.get('serre');
+  const okGenome = g => g && Number.isFinite(g.hue) && Number.isFinite(g.gen) && FTYPES.includes(g.ftype);
+  const lineage = saved && Array.isArray(saved.g) ? saved.g.filter(okGenome) : [];
+  if (saved && Number.isFinite(saved.clock)) clock = saved.clock;
+  if (saved && Array.isArray(saved.seeds)) for (const sd of saved.seeds.slice(-14)) if (okGenome(sd.g) && Number.isFinite(sd.x)) seeds.push({ x: clamp(sd.x * W, 20, W - 20), g: sd.g, ph: Math.random() * TAU });
+  for (let i = 0; i < 5; i++) spawnVine(W * (0.1 + 0.8 * (i + Math.random() * 0.6) / 5), groundY, -Math.PI / 2 + (Math.random() - 0.5) * 0.5, lineage.length ? { genome: lineage[i % lineage.length] } : {});
+  function save() {
+    const seen = new Set(), g = [];
+    for (const v of [...vines].sort((a, b) => b.genome.gen - a.genome.gen)) {
+      if (seen.has(v.genome) || g.length >= 7) continue;
+      seen.add(v.genome);
+      g.push(v.genome);
+    }
+    api.memory?.set('serre', { clock: Math.round(clock * 10) / 10, g, seeds: seeds.map(sd => ({ x: Math.round((sd.x / W) * 1000) / 1000, g: sd.g })) });
+  }
   for (let i = 0; i < 2; i++) spawnVine(W * (0.25 + i * 0.5), H * 0.08, Math.PI / 2, { maxLen: H * 0.6 });
   // un peu d'avance, pour que la serre ne soit pas nue à l'arrivée
   for (let k = 0; k < 90; k++) { growVines(1 / 15, seasonAt(clock)); clock += 1 / 15; }
 
   return {
-    resize, update, draw, tap, longpress,
+    resize, update, draw, tap, longpress, save,
     words: { phi: () => { if (!sunflower) makeSunflower(W / 2, H * 0.45); }, fibonacci: () => { if (!sunflower) makeSunflower(W / 2, H * 0.45); } },
     destroy() {},
   };

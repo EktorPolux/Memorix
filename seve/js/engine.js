@@ -177,6 +177,21 @@ export function makeCanvas(w, h) {
   return c;
 }
 
+// Un calque plein écran à la résolution exacte du canvas : on y dessine en coordonnées CSS, et il se pose
+// pixel pour pixel (blit). C'est une simple copie, nette sur les écrans fins, et jusqu'à huit fois plus rapide
+// qu'un calque qu'il faut agrandir ou rééchantillonner (même d'un demi-pixel, quand la largeur est arrondie).
+export function makeLayer(eng, opaque = false) {
+  const c = makeCanvas(eng.canvas.width, eng.canvas.height);
+  c.getContext('2d', { alpha: !opaque }).setTransform(eng.dpr, 0, 0, eng.dpr, 0, 0);
+  return c;
+}
+export function blit(ctx, layer) {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(layer, 0, 0);
+  ctx.restore();
+}
+
 // Moteur
 export function createEngine(canvas) {
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -250,11 +265,14 @@ export function createEngine(canvas) {
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   canvas.addEventListener('wheel', e => { touchInput(); eng.scene?.wheel?.(e); }, { passive: true });
 
-  // Boucle et régulateur de performance (?hq le désactive, pour juger le rendu sans carte graphique)
+  // Boucle et régulateur de performance (?hq le désactive, pour juger le rendu sans carte graphique).
+  // Chaque tableau garde sa propre mesure : un tableau lourd n'appauvrit plus ceux qu'on visite après lui,
+  // et quand tout est redevenu fluide un long moment, on retente une fois la pleine finesse.
   const params = new URLSearchParams(location.search);
   const governed = !params.has('hq');
   const timeScale = clamp(parseFloat(params.get('vitesse')) || 1, 0.1, 10); // pour observer les cycles longs
-  let last = performance.now(), avg = 16.7, sinceChange = 0, raf = 0;
+  const baseQuality = eng.quality, memo = new Map();
+  let sceneKey = null, last = performance.now(), avg = 16.7, sinceChange = 0, raf = 0;
   function frame(now) {
     raf = requestAnimationFrame(frame);
     let ms = now - last;
@@ -262,10 +280,18 @@ export function createEngine(canvas) {
     if (ms > 250) ms = 16.7;
     avg = avg * 0.95 + ms * 0.05;
     sinceChange += ms;
-    if (governed && sinceChange > 2500 && avg > 27) {
-      sinceChange = 0;
-      if (eng.dprScale > 0.62) { eng.dprScale *= 0.8; resize(); }
-      else if (eng.quality > 0.45) { eng.quality *= 0.8; eng.scene?.quality?.(eng.quality); }
+    if (governed && sinceChange > 2500) {
+      const m = memo.get(sceneKey);
+      if (avg > 27) {
+        sinceChange = 0;
+        if (eng.dprScale > 0.62) { eng.dprScale *= 0.8; resize(); }
+        else if (eng.quality > 0.45) { eng.quality *= 0.8; eng.scene?.quality?.(eng.quality); }
+      } else if (m && !m.retried && eng.dprScale < 1 && avg < 18.5 && sinceChange > 12000) {
+        m.retried = true;
+        sinceChange = 0;
+        eng.dprScale = Math.min(1, eng.dprScale / 0.8);
+        resize();
+      }
     }
     const dt = Math.min(ms / 1000, 0.05) * timeScale;
     eng.t += dt;
@@ -285,6 +311,16 @@ export function createEngine(canvas) {
     for (const fn of eng.listeners.frame) fn(dt, eng.t);
   }
   eng.start = () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } };
+  // juste avant de créer un tableau : il retrouve la finesse qu'il avait, ou la pleine finesse s'il est nouveau
+  eng.prepare = key => {
+    if (sceneKey !== null) { const m = memo.get(sceneKey); if (m) { m.s = eng.dprScale; m.q = eng.quality; } }
+    sceneKey = key;
+    let m = memo.get(key);
+    if (!m) memo.set(key, (m = { s: 1, q: baseQuality, retried: false }));
+    eng.scene = null;
+    eng.quality = m.q;
+    if (m.s !== eng.dprScale) { eng.dprScale = m.s; resize(); }
+  };
   eng.setScene = sc => {
     eng.scene = sc;
     avg = 16.7;

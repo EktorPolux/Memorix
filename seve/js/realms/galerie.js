@@ -95,6 +95,11 @@ export function create(api) {
     prevBtn.style.opacity = cur === 0 ? 0.35 : 1;
     nextBtn.style.opacity = cur === N - 1 ? 0.35 : 1;
   }
+  // le musée se souvient de la salle où tu étais
+  {
+    const saved = api.memory?.get('galerie');
+    if (saved && Number.isFinite(saved.room)) { cur = clamp(saved.room | 0, 0, N - 1); camX = cur * W; }
+  }
   updateBar();
 
   // ——— Géométrie d'une salle : un mur, un sol, une œuvre, un cartel
@@ -1880,6 +1885,7 @@ export function create(api) {
 
   return {
     resize, update, draw, down, move, up, tap, longpress, key, wheel,
+    save() { api.memory?.set('galerie', { room: cur }); },
     words: { magritte: () => { magritte = { i: cur, t: 0 }; secrets.find('magritte'); } },
     destroy() { bar.remove(); },
   };

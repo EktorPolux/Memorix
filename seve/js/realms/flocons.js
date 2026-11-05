@@ -1,7 +1,7 @@
 // Sève — La Chambre des Flocons : le modèle de Reiter (2005). Un flocon est l'histoire exacte des nuages qu'il traverse.
 // La glace est rendue translucide, en relief, sous une lumière qui tourne ; chaque flocon fini raconte sa vie,
 // puis se pose sur le velours noir, comme ceux que Wilson Bentley photographiait dans le Vermont.
-import { TAU, clamp, lerp, glow, drawGlow, makeCanvas, makeNoise, easeInOut } from '../engine.js';
+import { TAU, clamp, lerp, glow, drawGlow, makeCanvas, makeNoise, easeInOut, makeLayer, blit } from '../engine.js';
 
 export const mood = {
   root: 261.63, scale: 'wholetone', wave: 'sine', chord: [0, 4, 8], pad: 0.035, cutoff: 1800, lfo: 0.02, droneOct: 0.25,
@@ -64,7 +64,7 @@ export function create(api) {
     strip = { x: 18, y: H - (narrow ? 62 : 34) - 66, w: (narrow ? W - 36 : W - dw - 58), h: 66 };
     slots = Math.max(3, Math.floor(strip.w / 70));
     resting.forEach((f, k) => { f.slot = k; });
-    bg = makeCanvas(W, H);
+    bg = makeLayer(engine);
     const g = bg.getContext('2d');
     const grd = g.createLinearGradient(0, 0, 0, H);
     grd.addColorStop(0, '#050b1c');
@@ -260,7 +260,7 @@ export function create(api) {
   }
 
   function draw(ctx, t) {
-    ctx.drawImage(bg, 0, 0, W, H);
+    blit(ctx, bg);
     // de gros flocons flous, très loin derrière
     ctx.globalCompositeOperation = 'lighter';
     const bk = glow([150, 180, 240], 32, 0.5);
@@ -395,5 +395,32 @@ export function create(api) {
   }
   function longpress() { if (maxR > 8) finishFlake(); }
 
-  return { resize, update, draw, tap, longpress, destroy() {} };
+  // le velours se souvient : les flocons posés reviennent (en petites images), et la numérotation continue
+  {
+    const saved = api.memory?.get('flocons');
+    if (saved) {
+      done = Math.max(0, saved.done | 0);
+      for (const src of (saved.flakes || []).slice(-slots)) {
+        if (typeof src !== 'string' || !src.startsWith('data:image/')) continue;
+        const img = new Image();
+        img.src = src;
+        resting.push({ img, src, slot: -1, t: 3, melt: 0 });
+      }
+    }
+  }
+  function save() {
+    const flakes = [];
+    for (const f of resting) {
+      if (f.melt) continue;
+      try {
+        if (f.src) { flakes.push(f.src); continue; }
+        const c = makeCanvas(96, 96);
+        c.getContext('2d').drawImage(f.img, 0, 0, 96, 96);
+        f.src = c.toDataURL('image/png');
+        flakes.push(f.src);
+      } catch (_) { /* image pas encore prête : tant pis pour celle-là */ }
+    }
+    api.memory?.set('flocons', { done, flakes });
+  }
+  return { resize, update, draw, tap, longpress, save, destroy() {} };
 }

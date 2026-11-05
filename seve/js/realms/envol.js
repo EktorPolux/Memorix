@@ -168,6 +168,12 @@ export function create(api) {
   const cam = { x: 260, y: 300, a: 0.6, h: 120, turn: 0, speed: 46, sx: 0, sy: 0, travel: 0 };
   cam.sx = cam.x; cam.sy = cam.y;
   let clock = 0.3 * DAY, pitch = 0, lowT = 0, lastLabel = 0, dreamT = 0, mirrorK = 0, mirrorT = 0, userLanterns = 0, whaleSang = 0, mirrorFade = false;
+  // le rêve reprend où tu t'étais réveillé : même cap, même altitude, même heure du jour
+  const flight = api.memory?.get('envol');
+  if (flight && [flight.x, flight.y, flight.a, flight.h].every(Number.isFinite)) {
+    cam.x = cam.sx = flight.x; cam.y = cam.sy = flight.y; cam.a = flight.a; cam.h = clamp(flight.h, 30, 200);
+    if (Number.isFinite(flight.clock)) clock = flight.clock;
+  }
   const SIN = new Float32Array(1024);
   for (let i = 0; i < 1024; i++) SIN[i] = Math.sin((i / 1024) * TAU);
   const cranes = Array.from({ length: 9 }, (_, i) => ({ ox: (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 24, oy: Math.ceil(i / 2) * 11, ph: Math.random() * TAU, c: [[255, 214, 230], [214, 246, 230], [255, 244, 214], [224, 214, 255]][i % 4] }));
@@ -294,7 +300,9 @@ export function create(api) {
     const clear = ground <= WATER * HS + 0.01 ? 2.5 : 7; // au-dessus de l'eau, on peut la frôler
     cam.h = Math.min(210, cam.h + climb * 38 * dt); // monter, descendre : la main règle la vitesse verticale
     if (cam.h < ground + clear) cam.h += (ground + clear - cam.h) * Math.min(1, dt * 6); // on se cabre avant le relief
-    pitch += ((climb * RH * 0.12) - pitch) * Math.min(1, dt * 2);
+    // près du relief, le regard se relève : on frôle les crêtes sans jamais fixer le sol
+    const near = clamp((cam.h - ground - clear) / 24, 0, 1);
+    pitch += ((climb * RH * 0.12 * (climb < 0 ? near : 1)) - pitch) * Math.min(1, dt * 2);
     audio.setNoiseLevel(0.01 + cam.speed * 0.0003);
 
     // secrets d'avant : frôler l'eau, retrouver l'Arbre, faire le tour du tore
@@ -599,6 +607,7 @@ export function create(api) {
 
   return {
     resize, update, draw,
+    save() { api.memory?.set('envol', { x: Math.round(cam.x * 10) / 10, y: Math.round(cam.y * 10) / 10, a: Math.round(cam.a * 1000) / 1000, h: Math.round(cam.h * 10) / 10, clock: Math.round(clock * 10) / 10 }); },
     longpress() { longHold = true; audio.noise({ freq: 400, q: 0.5, dur: 1.2, vel: 0.08, type: 'bandpass', sweep: 3 }); },
     up() { longHold = false; },
     // toucher le monde : une lanterne s'élève de là où tu as touché, avec un vœu

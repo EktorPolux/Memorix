@@ -1,5 +1,6 @@
 // Sève — L'Atelier d'Alchimie : un automate de matière. Sable, eau, feu, graines… et ce qui naît de leurs rencontres.
-import { TAU, clamp, glow, drawGlow, makeCanvas, hslToRgb } from '../engine.js';
+import { TAU, clamp, glow, drawGlow, makeCanvas, hslToRgb, makeLayer, blit } from '../engine.js';
+import { rle, unrle } from '../memory.js';
 
 export const mood = {
   root: 130.81, scale: 'mixolydian', wave: 'triangle', chord: [0, 7, 10], pad: 0.045, cutoff: 900, lfo: 0.04,
@@ -63,7 +64,7 @@ export function create(api) {
     } else buildScene();
     off = makeCanvas(cols, rows); octx = off.getContext('2d');
     img = octx.createImageData(cols, rows); img32 = new Uint32Array(img.data.buffer);
-    bg = makeCanvas(W, H);
+    bg = makeLayer(engine);
     const g = bg.getContext('2d');
     const grd = g.createLinearGradient(0, 0, 0, H);
     grd.addColorStop(0, '#140b08'); grd.addColorStop(1, '#050303');
@@ -99,6 +100,21 @@ export function create(api) {
     put(C * 0.42, R - 6, C * 0.66, R - 3, SABLE);
   }
   resize(W, H);
+  // l'atelier se souvient de ce que tu y as versé : la grille revient, recalée sur le sol si l'écran a changé
+  {
+    const saved = api.memory?.get('alchimie');
+    if (saved && saved.runs && saved.cols > 0 && saved.rows > 0) {
+      const old = unrle(saved.runs, new Uint8Array(saved.cols * saved.rows)), dy = F - saved.F;
+      cell.fill(0);
+      for (let y = 0; y < saved.rows; y++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= rows) continue;
+        for (let x = 0; x < Math.min(cols, saved.cols); x++) cell[ny * cols + x] = old[y * saved.cols + x];
+      }
+      for (let y = Math.max(0, F - 3); y < rows; y++) for (let x = 0; x < cols; x++) if (!cell[y * cols + x]) cell[y * cols + x] = PIERRE;
+    }
+  }
+  function save() { api.memory?.set('alchimie', { cols, rows, F, runs: rle(cell) }); }
 
   const at = (x, y) => (x < 0 || y < 0 || x >= cols || y >= rows ? PIERRE : cell[y * cols + x]);
   const isLiquid = id => id === EAU || id === LAVE;
@@ -285,7 +301,7 @@ export function create(api) {
   }
 
   function draw(ctx, t) {
-    ctx.drawImage(bg, 0, 0, W, H);
+    blit(ctx, bg);
     glows.length = 0;
     hot.length = 0;
     const fl = (Math.sin(t * 9) + 1) * 0.5;
@@ -324,7 +340,7 @@ export function create(api) {
   }
 
   return {
-    resize, update, draw, key,
+    resize, update, draw, key, save,
     destroy() { bar.remove(); style.remove(); },
   };
 }

@@ -192,7 +192,20 @@ export function create(api) {
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
 
-    // le régime courant, écrit au-dessus du marais
+    // le régime courant, écrit au-dessus du marais, sur une ombre douce pour qu'il se lise même sur les taches claires
+    {
+      const R = Math.min(W * 0.48, 230);
+      ctx.save();
+      ctx.translate(W / 2, 86);
+      ctx.scale(1, 0.26);
+      const sh = ctx.createRadialGradient(0, 0, 0, 0, 0, R);
+      sh.addColorStop(0, 'rgba(2,7,7,0.76)');
+      sh.addColorStop(0.62, 'rgba(2,7,7,0.46)');
+      sh.addColorStop(1, 'rgba(2,7,7,0)');
+      ctx.fillStyle = sh;
+      ctx.fillRect(-R, -R, R * 2, R * 2);
+      ctx.restore();
+    }
     ctx.font = '400 10px "DM Mono", ui-monospace, monospace';
     if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
     ctx.textAlign = 'center';

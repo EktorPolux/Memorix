@@ -1,6 +1,6 @@
 // Sève — Les Aurores : le vent du Soleil glisse sur le champ de la Terre ; quelques particules
 // spiralent jusqu'aux pôles, et l'oxygène se met à chanter en vert.
-import { TAU, clamp, lerp, smoothstep, glow, drawGlow, rgba, makeCanvas, makeNoise, rng } from '../engine.js';
+import { TAU, clamp, lerp, smoothstep, glow, drawGlow, rgba, makeCanvas, makeNoise, rng, makeLayer, blit } from '../engine.js';
 
 export const mood = {
   root: 110, scale: 'lydian', wave: 'sine', chord: [0, 7, 11, 16], pad: 0.05, cutoff: 900, lfo: 0.03,
@@ -37,7 +37,7 @@ export function create(api) {
     aimg = actx.createImageData(AW, AH); a32 = new Uint32Array(aimg.data.buffer);
 
     // Le ciel : bleu de nuit, la Voie lactée, des milliers d'étoiles
-    sky = makeCanvas(W, H);
+    sky = makeLayer(engine);
     const g = sky.getContext('2d');
     const grd = g.createLinearGradient(0, 0, 0, horizon);
     grd.addColorStop(0, '#01030c'); grd.addColorStop(0.7, '#061229'); grd.addColorStop(1, '#0d2238');
@@ -60,7 +60,7 @@ export function create(api) {
     }
 
     // La terre : montagnes enneigées, forêt de sapins, la cabane, et le lac gelé qui reflète le ciel
-    land = makeCanvas(W, H);
+    land = makeLayer(engine);
     const l = land.getContext('2d');
     const ridge = (base, amp, f, seed) => {
       const pts = [];
@@ -94,9 +94,9 @@ export function create(api) {
     l.beginPath(); l.rect(0, horizon, W, H - horizon); l.clip();
     l.translate(0, 2 * horizon); l.scale(1, -1);
     l.globalAlpha = 0.5;
-    l.drawImage(sky, 0, 0);
+    l.drawImage(sky, 0, 0, W, H);
     l.globalAlpha = 0.35;
-    l.drawImage(land, 0, 0); // la forêt s'y reflète aussi
+    l.drawImage(land, 0, 0, W, H); // la forêt s'y reflète aussi
     l.restore();
     const ice = l.createLinearGradient(0, horizon, 0, H);
     ice.addColorStop(0, 'rgba(10,22,40,0.35)'); ice.addColorStop(1, 'rgba(14,26,44,0.75)');
@@ -223,7 +223,7 @@ export function create(api) {
 
   function draw(ctx, t) {
     renderAurora();
-    ctx.drawImage(sky, 0, 0, W, H);
+    blit(ctx, sky);
     ctx.globalCompositeOperation = 'lighter';
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(abuf, 0, 0, W, horizon);
@@ -241,7 +241,7 @@ export function create(api) {
       ctx.stroke();
     }
     ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(land, 0, 0, W, H);
+    blit(ctx, land);
     // le lac reflète l'aurore, troublé par la glace
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
@@ -301,7 +301,7 @@ export function create(api) {
     ctx.globalAlpha = k;
     ctx.fillStyle = '#01020a';
     ctx.fillRect(0, 0, W, H);
-    ctx.drawImage(sky, 0, 0, W, horizon * 0.5, 0, 0, W, H);
+    ctx.drawImage(sky, 0, 0, sky.width, horizon * 0.5 * (sky.width / W), 0, 0, W, H);
     const ex = W * 0.56, ey = H * 0.5, Re = Math.min(W, H) * 0.075;
     // le Soleil, loin à gauche, et son vent
     ctx.globalCompositeOperation = 'lighter';

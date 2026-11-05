@@ -2,7 +2,7 @@
 // ton regard choisit, et la règle mute (les Biomorphes de Dawkins, 1986).
 // Le génome dit bien plus que la règle : le port (dressé, étalé, pleureur), l'écorce, la forme des feuilles,
 // le type et la couleur des fleurs, l'irrégularité des rameaux. Chaque planche en tire une petite description botanique.
-import { TAU, clamp, lerp, glow, drawGlow, hsl, makeCanvas, rng, angleDiff } from '../engine.js';
+import { TAU, clamp, lerp, glow, drawGlow, hsl, makeCanvas, rng, angleDiff, makeLayer, blit } from '../engine.js';
 
 export const mood = {
   root: 164.81, scale: 'majPenta', wave: 'triangle', chord: [0, 4, 7, 12], pad: 0.038, cutoff: 1300, lfo: 0.035,
@@ -156,7 +156,7 @@ export function create(api) {
   function resize(w, h) {
     W = w; H = h;
     // un papier d'herbier sombre, à peine grenu
-    paper = makeCanvas(W, H);
+    paper = makeLayer(engine);
     const g = paper.getContext('2d');
     const grd = g.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.75);
     grd.addColorStop(0, '#0f1a12'); grd.addColorStop(1, '#050906');
@@ -169,7 +169,19 @@ export function create(api) {
     if (!motes.length) for (let i = 0; i < 40; i++) motes.push({ x: Math.random() * W, y: Math.random() * H, ph: Math.random() * TAU, sp: 4 + Math.random() * 8 });
   }
   resize(W, H);
-  newGeneration(ANCESTORS[ancestorIdx++ % ANCESTORS.length]);
+  // le jardin se souvient : la lignée reprend où tu l'avais laissée, et l'herbier garde ses plantes
+  const saved = api.memory?.get('darwin');
+  let resumed = false;
+  if (saved && saved.parent) {
+    try {
+      generation = Math.max(1, saved.gen | 0);
+      for (const g of (saved.herbier || []).slice(-8)) herbier.push(makeCell(g));
+      newGeneration(saved.parent);
+      resumed = true;
+    } catch (_) { herbier.length = 0; generation = 1; }
+  }
+  if (!resumed) newGeneration(ANCESTORS[ancestorIdx++ % ANCESTORS.length]);
+  function save() { api.memory?.set('darwin', { gen: generation, parent: parentCell.g, herbier: herbier.map(c => c.g) }); }
 
   // ——— Une planche : la plante, ses feuilles, ses fleurs
   function fit(c, box) {
@@ -341,7 +353,7 @@ export function create(api) {
   }
 
   function draw(ctx, t) {
-    ctx.drawImage(paper, 0, 0, W, H);
+    blit(ctx, paper);
     drawCard(ctx, parentCell, t, true);
     for (const c of cells) drawCard(ctx, c, t, false);
     // l'herbier, en bas : les plantes gardées
@@ -405,5 +417,5 @@ export function create(api) {
     if (herbier.length >= 3) secrets.find('herbier');
   }
 
-  return { resize, update, draw, tap, longpress, destroy() {} };
+  return { resize, update, draw, tap, longpress, save, destroy() {} };
 }

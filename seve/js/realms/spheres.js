@@ -1,5 +1,5 @@
 // Sève — L'Harmonie des Sphères : une étoile, la gravité, et des orbites qui chantent en franchissant le méridien.
-import { TAU, clamp, lerp, glow, drawGlow, rgba, hslToRgb, makeCanvas, makeNoise, rng } from '../engine.js';
+import { TAU, clamp, lerp, glow, drawGlow, rgba, hslToRgb, makeCanvas, makeNoise, rng, makeLayer, blit } from '../engine.js';
 
 export const mood = {
   root: 130.81, scale: 'majPenta', wave: 'sine', chord: [0, 7, 12, 19], pad: 0.04, cutoff: 900, lfo: 0.03,
@@ -35,7 +35,7 @@ export function create(api) {
 
   // Ciel : étoiles et nébuleuses, peints une fois
   function buildSky() {
-    sky = makeCanvas(W, H);
+    sky = makeLayer(engine);
     const g = sky.getContext('2d');
     g.fillStyle = '#020108';
     g.fillRect(0, 0, W, H);
@@ -236,6 +236,7 @@ export function create(api) {
     if (!resonanceFound && bound.length >= 2 && engine.frame % 20 === 0) {
       const info = bound.map(p => ({ p, o: orbitInfo(p) })).filter(x => engine.t - x.p.born > x.o.T * 1.5);
       for (let i = 0; i < info.length && !resonanceFound; i++) for (let j = i + 1; j < info.length; j++) {
+        if (info[i].p.given && info[j].p.given) continue;
         const r = Math.max(info[i].o.T, info[j].o.T) / Math.min(info[i].o.T, info[j].o.T);
         if (Math.abs(r - 2) < 0.04 || Math.abs(r - 1.5) < 0.03) {
           resonanceFound = true;
@@ -250,7 +251,7 @@ export function create(api) {
 
   // ——— Dessin
   function draw(ctx, t) {
-    ctx.drawImage(sky, 0, 0, W, H);
+    blit(ctx, sky);
     ctx.globalCompositeOperation = 'lighter';
     for (const s of twinkles) {
       const a = Math.pow(Math.max(0, Math.sin(t * s.sp + s.ph)), 6);
@@ -440,13 +441,30 @@ export function create(api) {
     addPlanet(p.x, p.y, (-dy / r) * v, (dx / r) * v);
   }
 
-  // un ciel déjà habité à l'arrivée : trois mondes sur des orbites différentes
-  [0.5, 0.78, 1.15].forEach((k, i) => {
+  // le ciel se souvient des mondes que tu y as lancés (positions et vitesses rapportées à l'orbite de référence)
+  const r0 = () => Math.min(W, H) * 0.25;
+  const saved = api.memory?.get('spheres');
+  if (saved && Array.isArray(saved.planets) && saved.planets.length) {
+    const k = r0();
+    for (const o of saved.planets.slice(0, 24)) {
+      if (![o.u, o.v, o.a, o.b, o.r].every(Number.isFinite)) continue;
+      planets.push({ x: cx + o.u * k, y: cy + o.v * k, vx: o.a * k, vy: o.b * k, r: o.r, m: o.r * o.r * o.r * 0.0000045, c: o.c, trail: new Float32Array(TRAIL * 2), ti: 0, tn: 0, born: engine.t - 30, side: Math.sign(o.u) || 1, flash: 0, ring: !!o.ring, given: !!o.given });
+    }
+  }
+  // sinon, un ciel déjà habité à l'arrivée : trois mondes sur des orbites différentes
+  if (!planets.length) [0.5, 0.78, 1.15].forEach((k, i) => {
     const r = Math.min(W, H) * 0.25 * k, a = i * 2.1 + 0.4;
     const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r, v = Math.sqrt(GM / r) * (0.95 + i * 0.04);
     const p = addPlanet(x, y, -Math.sin(a) * v, Math.cos(a) * v);
     p.born -= 30;
+    p.given = true; // ceux-là, le ciel les avait déjà : la résonance, c'est à toi de la trouver
   });
+  function save() {
+    if (dance) return;
+    const k = r0(), rd = v => Math.round(v * 10000) / 10000;
+    const kept = planets.filter(p => orbitInfo(p)).map(p => ({ u: rd((p.x - cx) / k), v: rd((p.y - cy) / k), a: rd(p.vx / k), b: rd(p.vy / k), r: rd(p.r), c: p.c.map(Math.round), ring: p.ring, given: !!p.given }));
+    api.memory?.set('spheres', kept.length ? { planets: kept } : null);
+  }
 
-  return { resize, update, draw, tap, down, move, up, words: { huit: () => { if (!dance) startDance(); } }, destroy() {} };
+  return { resize, update, draw, tap, down, move, up, save, words: { huit: () => { if (!dance) startDance(); } }, destroy() {} };
 }

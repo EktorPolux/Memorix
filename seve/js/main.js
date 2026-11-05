@@ -2,6 +2,7 @@
 import { createEngine, makeNoise, rng, glow, TAU, rgba, mixRgb, hexToRgb } from './engine.js';
 import { audio } from './audio.js';
 import { secrets } from './secrets.js';
+import { memory } from './memory.js';
 import { toast, titleCard, hideTitleCard, setRealmLabel, renderCarnet, setBadge } from './ui.js';
 
 export const REALMS = [
@@ -75,7 +76,7 @@ const api = {
   get W() { return engine.W; },
   get H() { return engine.H; },
   input: engine.input,
-  audio, secrets, toast,
+  audio, secrets, toast, memory,
   realms: REALMS,
   noise: makeNoise(7),
   rng, glow,
@@ -93,7 +94,7 @@ const api = {
     document.body.classList.remove('pre');
     const target = realmFromHash();
     if (target !== 'arbre') go(target);
-    else titleCard(REALMS[0], { hold: 5200 });
+    else { titleCard(REALMS[0], { hold: 5200 }); scheduleSnapshot('arbre', 11000); }
   },
   startAudio() { audio.init(); if (current) audio.setMood(current.mood, true); },
   rootsOpen,
@@ -186,19 +187,26 @@ async function go(id, opts = {}) {
   if (tour.on && !tour.nav) setTour(false);
   tour.nav = false;
   busy = true;
+  document.body.dataset.realm = id;
   const from = pendingFrom;
   pendingFrom = null;
+  // le tableau voyage pendant que l'iris se referme : on ne l'attend presque jamais
+  const modP = import(meta.file);
+  modP.catch(() => {});
   if (current) await irisOut(from, meta.color);
   hideTitleCard();
   let mod;
-  try { mod = await import(meta.file); } catch (err) {
+  try { mod = await modP; } catch (err) {
     console.error(err);
     toast({ kicker: 'Passage fermé', title: meta.title, text: "Ce monde n'a pas pu pousser. Recharge la page pour réessayer." });
     iris = null;
+    if (current) document.body.dataset.realm = current.id;
     busy = false;
     return;
   }
+  saveCurrent();
   try { current?.instance?.destroy?.(); } catch (err) { console.error(err); }
+  engine.prepare(id);
   current = { id, meta, instance: null, mood: mod.mood, extra: '' };
   const instance = mod.create(api, meta, opts);
   current.instance = instance;
@@ -208,6 +216,7 @@ async function go(id, opts = {}) {
   secrets.visit(id);
   updateChrome();
   if (!opts.intro) { titleCard(meta); irisIn(meta.color); }
+  scheduleSnapshot(id);
   if (tour.on) {
     tour.seen.add(id);
     if (tour.seen.size >= tourOrder().length) secrets.find('voyageur');
@@ -232,6 +241,11 @@ function updateChrome() {
 
 window.addEventListener('hashchange', () => { if (started) go(realmFromHash()); });
 
+// Les tableaux se souviennent : chacun range son souvenir quand on le quitte, ou quand la page se ferme
+function saveCurrent() { try { current?.instance?.save?.(); } catch (err) { console.error(err); } }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveCurrent(); });
+window.addEventListener('pagehide', saveCurrent);
+
 // Boutons
 $('btn-sound').addEventListener('click', () => {
   if (!audio.ctx) { audio.setMuted(!audio.muted); }
@@ -245,7 +259,7 @@ $('btn-voyage').addEventListener('click', () => { if (started) setTour(!tour.on)
 const carnet = $('carnet');
 function openCarnet() {
   const shown = REALMS.filter(r => !r.hidden || r.ready).map(r => ({ ...r, locked: r.id === 'racines' && !rootsOpen() }));
-  renderCarnet({ realms: shown, secrets, lockedText: `scellé · ${ROOTS_AT} secrets l'ouvrent`, onGo: id => { closeCarnet(); api.go(id); } });
+  renderCarnet({ realms: shown, secrets, souvenirs, lockedText: `scellé · ${ROOTS_AT} secrets l'ouvrent`, onGo: id => { closeCarnet(); api.go(id); } });
   carnet.hidden = false;
   $('carnet-close').focus();
 }
@@ -253,6 +267,34 @@ function closeCarnet() { carnet.hidden = true; }
 $('btn-carnet').addEventListener('click', openCarnet);
 $('carnet-close').addEventListener('click', closeCarnet);
 carnet.addEventListener('click', e => { if (e.target === carnet) closeCarnet(); });
+
+// Le carnet illustré : une petite image de chaque tableau, prise quand on y est installé
+// (le titre est parti, l'iris s'est ouvert), et refaite à chaque visite : le carnet montre où tu en es.
+const SOUV_KEY = 'seve.souvenirs';
+let souvenirs = {}, snapTimer = 0;
+try { souvenirs = JSON.parse(localStorage.getItem(SOUV_KEY)) || {}; } catch (_) { souvenirs = {}; }
+function scheduleSnapshot(id, ms = 6800) {
+  clearTimeout(snapTimer);
+  snapTimer = setTimeout(() => {
+    const run = () => { if (started && current && current.id === id && !busy && !iris && carnet.hidden && !document.hidden) snapshot(id); };
+    if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 1500 }); else run();
+  }, ms);
+}
+function snapshot(id) {
+  try {
+    const src = engine.canvas, tw = 288, th = 192; // 3:2, deux fois la taille affichée
+    const sw = src.width, sh = src.height;
+    let cw = sw, ch = (sw * th) / tw;
+    if (ch > sh) { ch = sh; cw = (sh * tw) / th; }
+    const c = document.createElement('canvas');
+    c.width = tw; c.height = th;
+    const g = c.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, tw, th);
+    souvenirs[id] = c.toDataURL('image/jpeg', 0.7);
+    localStorage.setItem(SOUV_KEY, JSON.stringify(souvenirs));
+  } catch (_) { /* stockage plein : le carnet gardera l'ancienne image */ }
+}
 
 // Éclipse : le passage d'Umbra
 function eclipse() {

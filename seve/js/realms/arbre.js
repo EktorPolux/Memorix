@@ -1,5 +1,5 @@
 // Sève — L'Arbre-Monde : le carrefour. Un arbre qui pousse vers la lumière, un ciel qui tourne, des fruits qui sont des portes.
-import { TAU, clamp, lerp, smoothstep, rng, glow, drawGlow, hexToRgb, rgba, mixRgb, segDist, easeOutBack, makeCanvas, makeNoise } from '../engine.js';
+import { TAU, clamp, lerp, smoothstep, rng, glow, drawGlow, hexToRgb, rgba, mixRgb, segDist, easeOutBack, makeCanvas, makeNoise, makeLayer, blit } from '../engine.js';
 
 export const mood = {
   root: 146.83, scale: 'majPenta', wave: 'triangle', chord: [0, 7, 12, 16], pad: 0.05, cutoff: 760, lfo: 0.05,
@@ -233,7 +233,8 @@ export function create(api, meta, opts = {}) {
   // deux balanciers : les brindilles répondent vite, le tronc lentement ; tous deux dépassent un peu, puis reviennent
   const sway = { fast: 0, fastV: 0, slow: 0, slowV: 0 };
   const hand = { x: -1e4, k: 0 }; // la main qui écarte l'herbe, adoucie
-  let vignette = null, moonImg = null, hovered = null, leafLayer = null, leafCtx = null, leafFresh = false;
+  let moonImg = null, hovered = null, leafLayer = null, leafCtx = null, leafFresh = false, leafBox = { ox: 0, oy: 0, w: 0, h: 0, dpr: 0 };
+  let branchCache = null, skyLayer = null, skyBand = 0, skyFull = true;
   let state = opts.intro && !hasGerminated ? 'seed' : 'live';
   let growT = state === 'seed' ? -1 : 999;
   if (opts.regrow) { state = 'grow'; growT = 0; } // après la Graine d'Or : un autre arbre pousse sous tes yeux
@@ -481,6 +482,7 @@ export function create(api, meta, opts = {}) {
 
   function resize(w, h) {
     W = w; H = h;
+    skyFull = true;
     groundY = Math.round(H * (H > W ? 0.84 : 0.875));
     const top = H > W ? 150 : 118;
     const treeH = -tree.bbox.minY, treeW = tree.bbox.maxX - tree.bbox.minX;
@@ -492,13 +494,6 @@ export function create(api, meta, opts = {}) {
       flies = Array.from({ length: Math.round(44 * q) }, () => ({ x: R() * W, y: groundY - R() * H * 0.55, vx: 0, vy: 0, ph: R() * TAU, sd: R() * 100 }));
       motes = Array.from({ length: Math.round(34 * q) }, () => ({ x: R() * W, y: R() * groundY, ph: R() * TAU, sd: R() * 100 }));
     }
-    vignette = makeCanvas(W, H);
-    const v = vignette.getContext('2d');
-    const grd = v.createRadialGradient(W / 2, H * 0.48, Math.min(W, H) * 0.3, W / 2, H * 0.5, Math.max(W, H) * 0.78);
-    grd.addColorStop(0, 'rgba(0,0,0,0)');
-    grd.addColorStop(1, 'rgba(0,0,0,0.55)');
-    v.fillStyle = grd;
-    v.fillRect(0, 0, W, H);
     moonImg = makeMoon(Math.round(Math.min(W, H) * 0.032 + 6));
     for (const sp of sprouts) sp.x = sp.u * W;
     placeFruits();
@@ -637,37 +632,66 @@ export function create(api, meta, opts = {}) {
   }
 
   // ——— Dessin
-  function draw(ctx, t) {
-    const ph = state === 'seed' ? 0.755 : phase();
-    const night = nightness(ph);
-    const [top, bot] = skyAt(ph);
-    const sky = ctx.createLinearGradient(0, 0, 0, groundY);
+  // Le fond (ciel, étoiles, écho des aurores, astres, et la nuit le halo de la couronne) change lentement :
+  // il vit sur un calque à la résolution exacte de l'écran, posé d'une simple copie, et repeint par bandes,
+  // un quart à chaque image. L'œil n'y voit rien ; le dessin, lui, respire.
+  function paintSky(g, t, ph, night, top, bot) {
+    const sky = g.createLinearGradient(0, 0, 0, groundY);
     sky.addColorStop(0, rgba(top));
     sky.addColorStop(1, rgba(bot));
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, W, H);
-
+    g.fillStyle = sky;
+    g.fillRect(0, 0, W, groundY + H * 0.03 + 2);
     if (night > 0.02) {
       for (const s of stars) {
         const a = night * (0.45 + 0.55 * Math.sin(t * s.tw + s.ph)) * (s.s > 1.2 ? 1 : 0.75);
         if (a <= 0.02) continue;
-        ctx.fillStyle = s.warm > 0.8 ? `rgba(255,220,190,${a})` : `rgba(225,230,255,${a})`;
-        ctx.fillRect(s.x * W, s.y * groundY, s.s, s.s);
+        g.fillStyle = s.warm > 0.8 ? `rgba(255,220,190,${a})` : `rgba(225,230,255,${a})`;
+        g.fillRect(s.x * W, s.y * groundY, s.s, s.s);
       }
     }
     // écho des Aurores : qui les a vues les retrouve, la nuit, au-dessus de l'arbre
-    if (night > 0.3 && secrets.wasVisited('aurores')) drawEchoAurora(ctx, t, night);
+    if (night > 0.3 && secrets.wasVisited('aurores')) drawEchoAurora(g, t, night);
     const sun = astrePos(ph), moon = astrePos((ph + 0.5) % 1);
     const mr = moonImg.width / 2;
-    ctx.globalCompositeOperation = 'lighter';
+    g.globalCompositeOperation = 'lighter';
     if (sun.y < groundY + 40) {
       const warm = mixRgb(hexToRgb('#ffd9a0'), hexToRgb('#ff8a5c'), 1 - clamp(sunElev(ph) * 2.5, 0, 1));
-      drawGlow(ctx, glow(warm.map(Math.round), 64), sun.x, sun.y, Math.min(W, H) * 0.32, 0.55);
-      drawGlow(ctx, glow([255, 245, 225], 32), sun.x, sun.y, mr * 1.6, 0.95);
+      drawGlow(g, glow(warm.map(Math.round), 64), sun.x, sun.y, Math.min(W, H) * 0.32, 0.55);
+      drawGlow(g, glow([255, 245, 225], 32), sun.x, sun.y, mr * 1.6, 0.95);
     }
-    if (moon.y < groundY + 40 && night > 0.05) drawGlow(ctx, glow([190, 200, 255], 64), moon.x, moon.y, mr * 7, 0.22 * night);
-    ctx.globalCompositeOperation = 'source-over';
-    if (moon.y < groundY + 40) { ctx.globalAlpha = 0.25 + 0.75 * night; ctx.drawImage(moonImg, moon.x - mr, moon.y - mr); ctx.globalAlpha = 1; }
+    if (moon.y < groundY + 40 && night > 0.05) drawGlow(g, glow([190, 200, 255], 64), moon.x, moon.y, mr * 7, 0.22 * night);
+    // la nuit, un halo très doux derrière la couronne
+    if (night > 0.1 && state !== 'seed') {
+      const front = growT * VEL;
+      for (let i = 0; i < twigs.length; i += 44) {
+        const n = twigs[i];
+        if (growT < 900 && front < n.dist) continue;
+        drawGlow(g, glow(LEAF_NIGHT[(i >> 2) % 3], 64), n.x1, n.y1, S * 0.45, 0.06 * night);
+      }
+    }
+    g.globalCompositeOperation = 'source-over';
+    if (moon.y < groundY + 40) { g.globalAlpha = 0.25 + 0.75 * night; g.drawImage(moonImg, moon.x - mr, moon.y - mr); }
+    g.globalAlpha = 1;
+  }
+
+  function draw(ctx, t) {
+    const ph = state === 'seed' ? 0.755 : phase();
+    const night = nightness(ph);
+    const [top, bot] = skyAt(ph);
+    if (!skyLayer || skyLayer.width !== engine.canvas.width || skyLayer.height !== engine.canvas.height) { skyLayer = makeLayer(engine, true); skyFull = true; }
+    const sg = skyLayer.getContext('2d');
+    if (skyFull || state !== 'live') {
+      paintSky(sg, t, ph, night, top, bot);
+      skyFull = false;
+    } else {
+      const bh = Math.ceil((groundY + H * 0.03 + 2) / 4);
+      sg.save();
+      sg.beginPath(); sg.rect(0, skyBand * bh, W, bh); sg.clip();
+      paintSky(sg, t, ph, night, top, bot);
+      sg.restore();
+      skyBand = (skyBand + 1) % 4;
+    }
+    blit(ctx, skyLayer);
 
     ctx.lineCap = 'round';
     for (const s of shooting) {
@@ -711,7 +735,7 @@ export function create(api, meta, opts = {}) {
     ctx.globalCompositeOperation = 'source-over';
 
     if (state !== 'seed') drawLabels(ctx);
-    ctx.drawImage(vignette, 0, 0, W, H);
+    // (le vignettage est posé en CSS par-dessus le canvas : la carte graphique le fait pour rien)
   }
 
   // le pied de l'arbre : une motte, des racines qui agrippent puis s'enfoncent, un réseau qui luit dessous
@@ -874,15 +898,32 @@ export function create(api, meta, opts = {}) {
   function drawTree(ctx, t, night) {
     const barkC = mixRgb(BARK_DAY, BARK_NIGHT, night), bark = rgba(barkC);
     const k = WK * S;
-    // branches, regroupées par épaisseur pour tracer vite
-    const buckets = new Map();
-    for (const n of nodes) {
-      if (!n.parent || n.g <= 0) continue;
-      const w = Math.max(0.6, branchPx(n, k));
-      const key = w < 4 ? Math.round(w * 4) / 4 : Math.round(w);
-      let b = buckets.get(key);
-      if (!b) buckets.set(key, (b = []));
-      b.push(n);
+    // branches, regroupées par épaisseur pour tracer vite ; une fois l'arbre poussé, les seaux ne changent plus,
+    // et chacun garde ses tiges continues (un tracé par tige plutôt qu'un par tronçon)
+    let buckets;
+    if (growT >= 900 && branchCache && branchCache.k === k) buckets = branchCache.buckets;
+    else {
+      buckets = new Map();
+      for (const n of nodes) {
+        if (!n.parent || n.g <= 0) continue;
+        const w = Math.max(0.6, branchPx(n, k));
+        const key = w < 4 ? Math.round(w * 4) / 4 : Math.round(w);
+        let b = buckets.get(key);
+        if (!b) buckets.set(key, (b = []));
+        b.push(n);
+      }
+      if (growT >= 900) {
+        for (const list of buckets.values()) {
+          const tail = new Map(), chains = [];
+          for (const n of list) {
+            const ch = tail.get(n.parent);
+            if (ch) { ch.push(n); tail.delete(n.parent); tail.set(n, ch); }
+            else { const c2 = [n]; chains.push(c2); tail.set(n, c2); }
+          }
+          list.chains = chains;
+        }
+        branchCache = { k, buckets };
+      }
     }
     ctx.strokeStyle = bark;
     ctx.lineCap = 'round';
@@ -890,7 +931,8 @@ export function create(api, meta, opts = {}) {
     for (const [w, list] of buckets) {
       ctx.lineWidth = w;
       ctx.beginPath();
-      for (const n of list) { ctx.moveTo(n.x0, n.y0); ctx.lineTo(n.x1, n.y1); }
+      if (list.chains) for (const ch of list.chains) { ctx.moveTo(ch[0].x0, ch[0].y0); for (const n of ch) ctx.lineTo(n.x1, n.y1); }
+      else for (const n of list) { ctx.moveTo(n.x0, n.y0); ctx.lineTo(n.x1, n.y1); }
       ctx.stroke();
     }
     // le relief de l'écorce : un fil de lumière sur le flanc des grosses branches, des sillons sur le tronc
@@ -916,27 +958,6 @@ export function create(api, meta, opts = {}) {
       }
       ctx.stroke();
     }
-    // les brindilles fractales au bout des rameaux
-    const front0 = growT * VEL;
-    const sprEnds = [];
-    ctx.strokeStyle = rgba(mixRgb(barkC, [60, 50, 60], 0.3), 0.9);
-    ctx.lineWidth = Math.max(0.6, k * 0.32);
-    ctx.beginPath();
-    const ex = new Float32Array(6), ey = new Float32Array(6), ea = new Float32Array(6);
-    for (const n of nodes) {
-      if (!n.spr || n.g < 1) continue;
-      const gk = growT >= 900 ? 1 : clamp((front0 - n.dist) / 0.3, 0, 1);
-      if (gk <= 0) continue;
-      const spr = n.spr;
-      for (let j = 0; j < 6; j++) {
-        const p = spr[j * 3], sx = p < 0 ? n.x1 : ex[p], sy = p < 0 ? n.y1 : ey[p];
-        const a = (p < 0 ? n.abs : ea[p]) + spr[j * 3 + 1], L = spr[j * 3 + 2] * S * gk;
-        ex[j] = sx + Math.sin(a) * L; ey[j] = sy - Math.cos(a) * L; ea[j] = a;
-        ctx.moveTo(sx, sy); ctx.lineTo(ex[j], ey[j]);
-        if (j >= 2) sprEnds.push(ex[j], ey[j], a, n.i + j);
-      }
-    }
-    ctx.stroke();
     // pulsations de sève : une lumière qui monte du pied jusqu'aux brindilles
     if (pulses.length) {
       ctx.globalCompositeOperation = 'lighter';
@@ -953,48 +974,13 @@ export function create(api, meta, opts = {}) {
       }
       ctx.globalCompositeOperation = 'source-over';
     }
-    // feuillage : trois formes de feuilles, trois tons, et la couleur de la saison qui passe dessus, doucement
+    // la couronne (brindilles, feuilles, fleurs) se peint sur son propre calque, une image sur deux :
+    // l'œil n'y voit rien, la machine respire. Et ce calque n'a que la taille de la couronne.
     const front = growT * VEL;
-    const sea = seasonNow();
-    const tones = [0, 1, 2].map(i => mixRgb(mixRgb(LEAF_DAY[i], LEAF_NIGHT[i], night), sea.tint, 0.3 * (1 - night * 0.5)));
-    // les feuilles se peignent sur leur propre calque, une image sur deux : l'œil n'y voit rien, la machine respire
-    const dpr = engine.dpr || 1, lw = Math.round(W * dpr), lh = Math.round(H * dpr);
-    if (!leafLayer || leafLayer.width !== lw || leafLayer.height !== lh) { leafLayer = makeCanvas(lw, lh); leafCtx = leafLayer.getContext('2d'); leafFresh = false; }
-    const repaint = !leafFresh || engine.frame % 2 === 0 || growT < 900;
-    const lc = leafCtx;
-    if (repaint) { lc.setTransform(1, 0, 0, 1, 0, 0); lc.clearRect(0, 0, lw, lh); lc.setTransform(dpr, 0, 0, dpr, 0, 0); leafFresh = true; }
-    const leafAt = (x, y, r, a, kind) => {
-      if (kind === 0) { lc.moveTo(x + r, y); lc.arc(x, y, r, 0, TAU); }
-      else if (kind === 1) { lc.moveTo(x + Math.cos(a) * r * 1.5, y + Math.sin(a) * r * 1.5); lc.ellipse(x, y, r * 1.5, r * 0.62, a, 0, TAU); }
-      else { const c = Math.cos(a) * r * 1.3, s2 = Math.sin(a) * r * 1.3; lc.moveTo(x + c, y + s2); lc.lineTo(x - s2 * 0.6, y + c * 0.6); lc.lineTo(x - c, y - s2); lc.lineTo(x + s2 * 0.6, y - c * 0.6); lc.closePath(); }
-    };
-    for (let tone = 0; repaint && tone < 3; tone++) {
-      lc.fillStyle = rgba(tones[tone], 0.8);
-      lc.beginPath();
-      for (const n of twigs) {
-        const la = growT >= 900 ? 1 : clamp((front - n.dist - 0.1) / 0.5, 0, 1);
-        if (la <= 0) continue;
-        for (const l of n.leaves) {
-          if (l.tone !== tone) continue;
-          const a = l.a + n.abs;
-          leafAt(n.x1 + Math.cos(a) * l.d * S, n.y1 + Math.sin(a) * l.d * S, l.r * S * la, a, l.kind);
-        }
-      }
-      for (let i = tone * 12; i < sprEnds.length; i += 36) leafAt(sprEnds[i], sprEnds[i + 1], 0.01 * S, sprEnds[i + 2] - Math.PI / 2, (sprEnds[i + 3] | 0) % 3);
-      lc.fill();
-    }
-    // au printemps, des fleurs pâles s'ouvrent dans la couronne ; en hiver, du givre scintille
-    if (repaint && sea.w[0] > 0.02 && growT >= 900) {
-      lc.fillStyle = `rgba(255,214,232,${0.85 * sea.w[0]})`;
-      lc.beginPath();
-      const r = clamp(S * 0.008, 1.2, 3);
-      for (let i = 0; i < twigs.length; i += 5) {
-        const n = twigs[i];
-        lc.moveTo(n.x1 + r * 2, n.y1); lc.arc(n.x1, n.y1, r * 2, 0, TAU);
-      }
-      lc.fill();
-    }
-    ctx.drawImage(leafLayer, 0, 0, W, H);
+    const dpr = engine.dpr || 1;
+    if (!leafFresh || engine.frame % 2 === 0 || growT < 900 || leafBox.dpr !== dpr) paintCrown(t, night, front, barkC, k, dpr);
+    ctx.drawImage(leafLayer, 0, 0, leafBox.w, leafBox.h, leafBox.ox / dpr, leafBox.oy / dpr, leafBox.w / dpr, leafBox.h / dpr);
+    const sea = crownSeason;
     if (sea.w[3] > 0.02 && growT >= 900) {
       ctx.globalCompositeOperation = 'lighter';
       const fr = glow([220, 235, 255], 8);
@@ -1012,33 +998,147 @@ export function create(api, meta, opts = {}) {
         const n = twigs[i];
         if (growT < 900 && front < n.dist) continue;
         drawGlow(ctx, glow(LEAF_NIGHT[i % 3], 24), n.x1, n.y1, S * 0.12, 0.14 * night);
-        if (i % 44 === 0) drawGlow(ctx, glow(LEAF_NIGHT[(i >> 2) % 3], 64), n.x1, n.y1, S * 0.45, 0.05 * night);
       }
       ctx.globalCompositeOperation = 'source-over';
     }
-    // fleurs des secrets trouvés
-    const found = secrets.foundIndex();
+    for (const f of fruits) drawFruit(ctx, f, t, night);
+  }
+
+  // La couronne, sur son calque : brindilles fractales, feuilles (trois formes, trois tons, et la couleur
+  // de la saison qui passe dessus), fleurs pâles du printemps, et une fleur par secret trouvé.
+  const sprXY = [], sprEnds = [], sprX = new Float32Array(6), sprY = new Float32Array(6), sprA = new Float32Array(6);
+  let crownSeason = seasonNow();
+  function paintCrown(t, night, front, barkC, k, dpr) {
+    const sea = (crownSeason = seasonNow());
+    // les brindilles : d'abord leur géométrie, car leurs pointes débordent des rameaux
+    sprXY.length = 0;
+    sprEnds.length = 0;
+    for (const n of nodes) {
+      if (!n.spr || n.g < 1) continue;
+      const gk = growT >= 900 ? 1 : clamp((front - n.dist) / 0.3, 0, 1);
+      if (gk <= 0) continue;
+      const spr = n.spr;
+      for (let j = 0; j < 6; j++) {
+        const p = spr[j * 3], sx = p < 0 ? n.x1 : sprX[p], sy = p < 0 ? n.y1 : sprY[p];
+        const a = (p < 0 ? n.abs : sprA[p]) + spr[j * 3 + 1], L = spr[j * 3 + 2] * S * gk;
+        sprX[j] = sx + Math.sin(a) * L; sprY[j] = sy - Math.cos(a) * L; sprA[j] = a;
+        sprXY.push(sx, sy, sprX[j], sprY[j]);
+        if (j >= 2) sprEnds.push(sprX[j], sprY[j], a, n.i + j);
+      }
+    }
+    // le cadre : la couronne, plus la portée des feuilles et le halo des fleurs
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const n of twigs) {
+      if (n.x1 < x0) x0 = n.x1;
+      if (n.x1 > x1) x1 = n.x1;
+      if (n.y1 < y0) y0 = n.y1;
+      if (n.y1 > y1) y1 = n.y1;
+    }
+    for (let i = 0; i < sprXY.length; i += 4) {
+      if (sprXY[i + 2] < x0) x0 = sprXY[i + 2];
+      if (sprXY[i + 2] > x1) x1 = sprXY[i + 2];
+      if (sprXY[i + 3] < y0) y0 = sprXY[i + 3];
+      if (sprXY[i + 3] > y1) y1 = sprXY[i + 3];
+    }
+    if (!(x1 >= x0)) { x0 = x1 = rootX; y0 = y1 = groundY; }
+    const fr0 = clamp(S * 0.045, 4, 8), found = secrets.foundIndex();
+    const pad = Math.max(0.1 * S + 8, found.length ? fr0 * 4.2 : 0);
+    const ox = Math.floor((x0 - pad) * dpr), oy = Math.floor((y0 - pad) * dpr);
+    const w = Math.ceil((x1 + pad) * dpr) - ox, h = Math.ceil((y1 + pad) * dpr) - oy;
+    if (!leafLayer || leafLayer.width < w || leafLayer.height < h) {
+      leafLayer = makeCanvas(Math.ceil(w * 1.1) + 8, Math.ceil(h * 1.1) + 8);
+      leafCtx = leafLayer.getContext('2d');
+      leafBox.w = leafBox.h = 0;
+    }
+    const lc = leafCtx;
+    lc.setTransform(1, 0, 0, 1, 0, 0);
+    lc.clearRect(0, 0, Math.max(w, leafBox.w), Math.max(h, leafBox.h));
+    lc.setTransform(dpr, 0, 0, dpr, -ox, -oy);
+    leafBox = { ox, oy, w, h, dpr };
+    leafFresh = true;
+    // brindilles : des traits d'un pixel, les bouts arrondis n'y changeraient rien
+    lc.strokeStyle = rgba(mixRgb(barkC, [60, 50, 60], 0.3), 0.9);
+    lc.lineWidth = Math.max(0.6, k * 0.32);
+    lc.lineCap = 'butt';
+    lc.beginPath();
+    for (let i = 0; i < sprXY.length; i += 4) { lc.moveTo(sprXY[i], sprXY[i + 1]); lc.lineTo(sprXY[i + 2], sprXY[i + 3]); }
+    lc.stroke();
+    // feuilles
+    const tones = [0, 1, 2].map(i => mixRgb(mixRgb(LEAF_DAY[i], LEAF_NIGHT[i], night), sea.tint, 0.3 * (1 - night * 0.5)));
+    const leafAt = (x, y, r, a, kind) => {
+      if (kind === 0) { lc.moveTo(x + r, y); lc.arc(x, y, r, 0, TAU); }
+      else if (kind === 1) { lc.moveTo(x + Math.cos(a) * r * 1.5, y + Math.sin(a) * r * 1.5); lc.ellipse(x, y, r * 1.5, r * 0.62, a, 0, TAU); }
+      else { const c = Math.cos(a) * r * 1.3, s2 = Math.sin(a) * r * 1.3; lc.moveTo(x + c, y + s2); lc.lineTo(x - s2 * 0.6, y + c * 0.6); lc.lineTo(x - c, y - s2); lc.lineTo(x + s2 * 0.6, y - c * 0.6); lc.closePath(); }
+    };
+    for (let tone = 0; tone < 3; tone++) {
+      lc.fillStyle = rgba(tones[tone], 0.8);
+      lc.beginPath();
+      for (const n of twigs) {
+        const la = growT >= 900 ? 1 : clamp((front - n.dist - 0.1) / 0.5, 0, 1);
+        if (la <= 0) continue;
+        for (const l of n.leaves) {
+          if (l.tone !== tone) continue;
+          const a = l.a + n.abs;
+          leafAt(n.x1 + Math.cos(a) * l.d * S, n.y1 + Math.sin(a) * l.d * S, l.r * S * la, a, l.kind);
+        }
+      }
+      for (let i = tone * 12; i < sprEnds.length; i += 36) leafAt(sprEnds[i], sprEnds[i + 1], 0.01 * S, sprEnds[i + 2] - Math.PI / 2, (sprEnds[i + 3] | 0) % 3);
+      lc.fill();
+    }
+    // au printemps, des fleurs pâles s'ouvrent dans la couronne (en hiver, c'est le givre qui scintille, plus haut)
+    if (sea.w[0] > 0.02 && growT >= 900) {
+      lc.fillStyle = `rgba(255,214,232,${0.85 * sea.w[0]})`;
+      lc.beginPath();
+      const r = clamp(S * 0.008, 1.2, 3);
+      for (let i = 0; i < twigs.length; i += 5) {
+        const n = twigs[i];
+        lc.moveTo(n.x1 + r * 2, n.y1); lc.arc(n.x1, n.y1, r * 2, 0, TAU);
+      }
+      lc.fill();
+    }
+    // fleurs des secrets trouvés : leurs halos d'abord, puis leurs corolles, peintes une fois pour toutes en petites images
+    if (!found.length) return;
+    const blooms = [];
     found.forEach((s, i) => {
       const n = flowerSlots[i % flowerSlots.length];
       if (!n) return;
       const b0 = bloomT.get(s.id);
       const k2 = b0 === undefined ? 1 : easeOutBack(clamp((t - b0) / 1.4, 0, 1));
       const la = growT >= 900 ? 1 : clamp((front - n.dist) / 0.5, 0, 1);
-      const rc = realmColor(s.realm);
-      drawFlower(ctx, n.x1, n.y1, clamp(S * 0.045, 4, 8) * k2 * la, t * 0.3 + i, night, i % 3, rc);
+      const r = fr0 * k2 * la;
+      if (r > 0.3) blooms.push([n.x1, n.y1, r, t * 0.3 + i, i % 3, realmColor(s.realm)]);
     });
-    for (const f of fruits) drawFruit(ctx, f, t, night);
+    lc.globalCompositeOperation = 'lighter';
+    for (const [x, y, r, , , rc] of blooms) drawGlow(lc, glow(rc.map(Math.round), 24), x, y, r * 3.4, 0.3 + 0.4 * night);
+    lc.globalCompositeOperation = 'source-over';
+    lc.globalAlpha = 1;
+    for (const [x, y, r, rot, kind, rc] of blooms) {
+      const sp = flowerSprite(kind, rc, fr0, dpr), q2 = (r / fr0) * sp.R, c = kind === 1 ? 1 : Math.cos(rot), s2 = kind === 1 ? 0 : Math.sin(rot);
+      lc.setTransform(dpr * c, dpr * s2, -dpr * s2, dpr * c, x * dpr - ox, y * dpr - oy);
+      lc.drawImage(sp, -q2, -q2, q2 * 2, q2 * 2);
+    }
+    lc.setTransform(dpr, 0, 0, dpr, -ox, -oy);
   }
 
   // une fleur par secret : rose à cinq lobes, clochette ou étoile, teintée par le monde où le secret a été trouvé
   const realmColor = id => { const r = api.realms.find(m => m.id === id); return r ? hexToRgb(r.color) : [255, 236, 200]; };
-  function drawFlower(ctx, x, y, r, rot, night, kind = 0, rc = [255, 220, 235]) {
+  const flowerCache = new Map();
+  function flowerSprite(kind, rc, r, dpr) {
+    const key = kind + '|' + rc.join(',') + '|' + r + '|' + dpr;
+    let c = flowerCache.get(key);
+    if (c) return c;
+    const R = r * 1.45, size = Math.ceil(R * 2 * dpr) + 2;
+    c = makeCanvas(size, size);
+    c.R = size / 2 / dpr;
+    const g = c.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, size / 2, size / 2);
+    drawFlower(g, 0, 0, r, 0, kind, rc);
+    flowerCache.set(key, c);
+    return c;
+  }
+  function drawFlower(ctx, x, y, r, rot, kind = 0, rc = [255, 220, 235]) {
     if (r <= 0.3) return;
     const petal = mixRgb([255, 240, 246], rc, 0.38);
-    ctx.globalCompositeOperation = 'lighter';
-    drawGlow(ctx, glow(rc.map(Math.round), 24), x, y, r * 3.4, 0.3 + 0.4 * night);
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 1;
     ctx.fillStyle = rgba(petal, 0.95);
     ctx.beginPath();
     if (kind === 1) {
@@ -1109,24 +1209,61 @@ export function create(api, meta, opts = {}) {
     }
   }
 
+  // Les noms des fruits : peints une fois en petites images (le texte espacé coûte cher à recomposer à chaque image)
+  const labelCache = new Map();
+  let labelMeasure = null;
+  function labelSprite(name, small, dpr) {
+    if (document.fonts && document.fonts.status !== 'loaded') return null; // la police n'est pas encore là : texte direct
+    const key = name + '|' + small + '|' + dpr;
+    let c = labelCache.get(key);
+    if (c) return c;
+    const font = '400 9.5px "DM Mono", ui-monospace, monospace', ls = small ? '1.5px' : '3px';
+    const m = labelMeasure || (labelMeasure = makeCanvas(1, 1).getContext('2d'));
+    m.font = font;
+    if ('letterSpacing' in m) m.letterSpacing = ls;
+    const tw = m.measureText(name).width;
+    c = makeCanvas(Math.ceil((tw + 4) * dpr), Math.ceil(16 * dpr));
+    c.cw = c.width / dpr; c.ch = c.height / dpr;
+    const g = c.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.font = font;
+    if ('letterSpacing' in g) g.letterSpacing = ls;
+    g.textAlign = 'left';
+    g.textBaseline = 'middle';
+    g.fillStyle = 'rgb(239,233,255)';
+    g.fillText(name, 2, 8);
+    labelCache.set(key, c);
+    return c;
+  }
   function drawLabels(ctx) {
     const a = growT >= 900 ? 1 : clamp((growT - GROW_DUR + 0.5) / 0.5, 0, 1);
     if (a <= 0) return;
     ctx.textAlign = 'center';
-    const small = W < 560;
+    const small = W < 560, dpr = engine.dpr || 1;
     const r = fruitR();
     for (const f of fruits) {
       const ready = f.realm.ready;
       // les fruits du sommet portent leur nom au-dessus ; sur un petit écran, ceux de l'anneau intérieur le portent dessous, pour ne pas se marcher dessus
       const above = Math.abs(f.u) < 0.75 && !(small && f.ring === 1);
-      ctx.font = '400 9.5px "DM Mono", ui-monospace, monospace';
-      if ('letterSpacing' in ctx) ctx.letterSpacing = small ? '1.5px' : '3px';
       const name = f.realm.short.toUpperCase();
-      const tw = ctx.measureText(name).width;
-      const lx = clamp(f.x, 10 + tw / 2, W - 10 - tw / 2);
-      ctx.fillStyle = `rgba(239,233,255,${(ready ? 0.72 : 0.36) * a + f.hover * 0.28})`;
-      ctx.textBaseline = above ? 'bottom' : 'top';
-      ctx.fillText(name, lx, above ? f.y - r * 1.55 - 4 : f.y + r * 1.55 + 4);
+      const alpha = (ready ? 0.72 : 0.36) * a + f.hover * 0.28;
+      const ly = above ? f.y - r * 1.55 - 4 : f.y + r * 1.55 + 4;
+      const sp = labelSprite(name, small, dpr);
+      if (sp) {
+        const lx = clamp(f.x, 10 + sp.cw / 2, W - 10 - sp.cw / 2);
+        ctx.globalAlpha = Math.min(1, alpha);
+        ctx.drawImage(sp, Math.round((lx - sp.cw / 2) * dpr) / dpr, Math.round((above ? ly - 13 : ly - 3) * dpr) / dpr, sp.cw, sp.ch);
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.font = '400 9.5px "DM Mono", ui-monospace, monospace';
+        if ('letterSpacing' in ctx) ctx.letterSpacing = small ? '1.5px' : '3px';
+        const tw = ctx.measureText(name).width;
+        const lx = clamp(f.x, 10 + tw / 2, W - 10 - tw / 2);
+        ctx.fillStyle = `rgba(239,233,255,${alpha})`;
+        ctx.textBaseline = above ? 'bottom' : 'top';
+        ctx.fillText(name, lx, ly);
+        if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+      }
       if (f.hover > 0.05) {
         if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
         ctx.font = `italic 400 ${small ? 18 : 23}px "Cormorant Garamond", Georgia, serif`;

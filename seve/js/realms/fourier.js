@@ -162,7 +162,23 @@ export function create(api) {
 
   function resize(w, h) { W = w; H = h; cx = W / 2; cy = H / 2 - (H > W ? 20 : 10); S = Math.min(W, H) * (H > W ? 0.36 : 0.3); }
   resize(W, H);
-  gallery(0);
+  // l'atelier se souvient de ton dernier dessin (ou de la forme que tu regardais)
+  const userShape = pts => ({ name: 'Ton dessin', eq: `${N} points · ${N} cercles possibles · le premier n'est que le centre de gravité`, pts, unit: false, user: true });
+  {
+    const saved = api.memory?.get('fourier');
+    if (saved && Array.isArray(saved.pts) && saved.pts.length === N * 2) {
+      const pts = [];
+      for (let i = 0; i < N; i++) pts.push([saved.pts[i * 2] * S, saved.pts[i * 2 + 1] * S]);
+      galleryIdx = (saved.gallery | 0) % GALLERY.length;
+      useShape(userShape(pts));
+      setN(clamp(saved.n | 0, 0, STEPS.length - 1));
+    } else gallery(saved ? saved.gallery | 0 : 0);
+  }
+  function save() {
+    const out = { gallery: galleryIdx, n: nIdx };
+    if (shape?.user) out.pts = shape.pts.flatMap(([x, y]) => [Math.round((x / S) * 1000) / 1000, Math.round((y / S) * 1000) / 1000]);
+    api.memory?.set('fourier', out);
+  }
 
   // ——— La voix des formes : x dans l'oreille gauche, y dans la droite
   function startVoice() {
@@ -322,7 +338,7 @@ export function create(api) {
     for (let i = 1; i < d.length; i++) len += Math.hypot(d[i][0] - d[i - 1][0], d[i][1] - d[i - 1][1]);
     if (len < 140 || d.length < 10) return;
     const pts = resample(d).map(([x, y]) => [x - cx, y - cy]);
-    useShape({ name: 'Ton dessin', eq: `${N} points · ${N} cercles possibles · le premier n'est que le centre de gravité`, pts, unit: false, user: true });
+    useShape(userShape(pts));
     setN(13);
     // un seul cercle porte presque toute la forme : c'est l'épicycle de Ptolémée
     const moving = coeffs.filter(c => c.k !== 0);
@@ -333,7 +349,7 @@ export function create(api) {
   function tap() { nextShape(); }
 
   return {
-    resize, update, draw, down, move, up, tap,
+    resize, update, draw, down, move, up, tap, save,
     destroy() { stopVoice(); bar.remove(); },
   };
 }

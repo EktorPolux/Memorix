@@ -1,6 +1,6 @@
 // Sève — Les Lignes de Force : des aimants, de la limaille de fer qui s'oriente, des lignes qui coulent
 // du nord au sud, ta main qui devient boussole, et une bobine où l'on rejoue l'induction de Faraday (1831).
-import { TAU, clamp, glow, drawGlow, makeCanvas, angleDiff } from '../engine.js';
+import { TAU, clamp, glow, drawGlow, makeCanvas, angleDiff, makeLayer, blit } from '../engine.js';
 
 export const mood = {
   root: 87.31, scale: 'dorian', wave: 'sine', chord: [0, 7, 12], pad: 0.045, cutoff: 600, lfo: 0.03,
@@ -20,7 +20,7 @@ export function create(api) {
 
   function resize(w, h) {
     W = w; H = h;
-    bg = makeCanvas(W, H);
+    bg = makeLayer(engine);
     const g = bg.getContext('2d');
     const grd = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.1, W / 2, H / 2, Math.max(W, H) * 0.75);
     grd.addColorStop(0, '#0e131f'); grd.addColorStop(1, '#04060b');
@@ -45,8 +45,20 @@ export function create(api) {
   resize(W, H);
   const L0 = () => clamp(Math.min(W, H) * 0.18, 70, 150);
   const addMagnet = (x, y, a, len = L0()) => magnets.push({ x, y, a, ta: a, len, lift: 0, pulse: 0 });
-  addMagnet(W * 0.34, H * 0.46, 0);
-  addMagnet(W * 0.6, H * (H > W ? 0.6 : 0.5), Math.PI / 5);
+  // l'établi se souvient : chaque aimant reprend sa place, son angle et sa taille (en proportion de l'écran)
+  const saved = api.memory?.get('champs');
+  if (saved && Array.isArray(saved.m) && saved.m.length) {
+    for (const o of saved.m.slice(0, 12)) if ([o.x, o.y, o.a, o.l].every(Number.isFinite)) addMagnet(o.x * W, o.y * H, o.a, o.l * L0());
+    if (saved.coil && Number.isFinite(saved.coil.x)) { coil.x = clamp(saved.coil.x * W, 60, W - 60); coil.y = clamp(saved.coil.y * H, 80, H - 80); }
+  }
+  if (!magnets.length) {
+    addMagnet(W * 0.34, H * 0.46, 0);
+    addMagnet(W * 0.6, H * (H > W ? 0.6 : 0.5), Math.PI / 5);
+  }
+  function save() {
+    const rd = v => Math.round(v * 10000) / 10000;
+    api.memory?.set('champs', { m: magnets.map(m => ({ x: rd(m.x / W), y: rd(m.y / H), a: rd(m.ta), l: rd(m.len / L0()) })), coil: { x: rd(coil.x / W), y: rd(coil.y / H) } });
+  }
 
   // Chaque aimant : un pôle nord (+) et un pôle sud (−). Champ en 1/r², comme deux charges magnétiques.
   function poles() {
@@ -152,7 +164,7 @@ export function create(api) {
   }
 
   function draw(ctx, t) {
-    ctx.drawImage(bg, 0, 0, W, H);
+    blit(ctx, bg);
     // limaille, regroupée par intensité
     const half = gap * 0.36;
     for (let b = 0; b < 5; b++) {
@@ -336,5 +348,5 @@ export function create(api) {
     secrets.find('monopole');
   }
 
-  return { resize, update, draw, down, move, up, tap, longpress, destroy() { clearTimeout(lastTap.timer); } };
+  return { resize, update, draw, down, move, up, tap, longpress, save, destroy() { clearTimeout(lastTap.timer); } };
 }
